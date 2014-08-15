@@ -33,6 +33,7 @@ class RGBLed {
     void setRed(int);
     void setGreen(int);
     void setBlue(int);
+    void setRGB(int red, int green, int blue);
     void allOff();
     void setWhite(int);
     void setFadeSpeed(int);

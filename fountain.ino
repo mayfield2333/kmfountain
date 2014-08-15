@@ -1,9 +1,9 @@
 #include "Arduino.h"
-#define debug true
+#define debug false
 #include "debug.h"
 #include "remote.h"
 #include "led.h"
-#include "pump.h"
+//#include "pump.h"
 
 #define REMOTE_PIN 22
 #define BLUE_PIN   9
@@ -16,11 +16,15 @@
 
 Remote remote;
 RGBLed rgb;
-Pump   pump[NUM_PUMPS];
+//Pump   pump[NUM_PUMPS];
 
 unsigned long change;
 
 void setup() {
+  // USB can be used for Debug output.
+  Serial.begin(9600);
+  delay(100);
+  Dln("setup");
   remote.init(REMOTE_PIN);
   rgb.init(BLUE_PIN, RED_PIN, GREEN_PIN);
 //  for (int pp = 0; pp < NUM_PUMPS; ++pp)
@@ -28,9 +32,7 @@ void setup() {
 //    pump[pp].init(FIRST_PUMP_PIN + pp);
 //  }
   change = millis();
-//  randomSeed(analogRead(0));
-  // USB can be used for Debug output.
-  Serial.begin(9600);
+  randomSeed(analogRead(0));
 }
 
 
@@ -52,9 +54,9 @@ void loop() {
     D2("Change time",(delay(5000), ""));
     
     int r;
-    change = millis() + 10000;
+    change = millis() + 5000;
     int speed;
-    rgb.setFadeSpeed(speed = random(4,10)* 1000);
+    rgb.setFadeSpeed(speed = random(2,3)* 1000);
     D2("Speed=",speed);
     rgb.randomColor();
     Dln();
