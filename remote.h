@@ -44,7 +44,8 @@ public:
 
   int getState();
 
-  boolean wait(int msec);
+  boolean pause(int msec);
+  void clear();
 };
 
 

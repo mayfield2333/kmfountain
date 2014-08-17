@@ -25,7 +25,7 @@ void Pwm::update() {
      long elapsed = (current - _startTime);
      
      // Past fade speed? then done fading
-     if (elapsed > _fadeSpeed) {
+     if (elapsed > _fadeSpeed || _fadeSpeed == 0) {
        _value = _newValue;
        D2("elapsed time\n_value=",_value);
      }

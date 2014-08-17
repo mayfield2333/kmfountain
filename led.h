@@ -1,4 +1,5 @@
 #include "pwm.h"
+#include "remote.h"
 
 class Led  : public Pwm {    
 
@@ -39,5 +40,5 @@ class RGBLed {
     void setFadeSpeed(int);
     void randomColor();
     void update();
-    void test();
+    void test(Remote *remote);
 };

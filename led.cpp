@@ -14,56 +14,88 @@ int tint() {
   return random(0,20);
 }
 
-void RGBLed::test() {
+void RGBLed::test(Remote *remote) {
   int elapse = 3000;
   Dln("RGBLED:test");
   setFadeSpeed(elapse/2);
   setRGB(255,0,0);
   unsigned long offtime = millis() + 6000;
   while(millis() < offtime)
+  {
     update();
+    if (remote->pressed())
+      return;
+  }
   //allOff();
   setRGB(255,64,0);
   offtime = millis() + elapse;
   while(millis() < offtime)
+  {
+    if (remote->pressed())
+      return;
     update();
-
+  }
   setRGB(0,255,0);
   offtime = millis() + elapse;
   while(millis() < offtime)
-    update();
+  {
+    if (remote->pressed())
+      return;
 
+    update();
+  }
   //allOff();
   setRGB(0,127,127);  
   offtime = millis() + elapse;
   while(millis() < offtime)
+  {
+    if (remote->pressed())
+      return;
     update();
+  }
 
   setRGB(0,0,255);  
   offtime = millis() + elapse;
   while(millis() < offtime)
+  {
+    if (remote->pressed())
+      return;
     update();
+  }
 
   setRGB(127,0,127);  
   offtime = millis() + elapse;
   while(millis() < offtime)
+  {
     update();
+    if (remote->pressed())
+      return;
+  }
+
 
   setWhite(255);
   offtime = millis() + elapse;
   while (millis() < offtime)
+  {
+    if (remote->pressed())
+      return;
     update();
+  }
   
   setWhite(0);
   offtime = millis() + elapse;
   while (millis() < offtime)
+  {
+    if (remote->pressed())
+      return;
     update();
+  }
   
 }
 
 void RGBLed::randomColor()
 {
-    int primary = random(0,3);
+    int primary = random(0,2);
     int secondary = random(0,1) == 0 ? -1 : random(0,2);  // Use primary only half the time.
     
     int r;

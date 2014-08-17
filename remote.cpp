@@ -37,10 +37,10 @@ void Remote::init(int firstpin)
 
 void Remote::init(int pin_a, int pin_b, int pin_c, int pin_d)
 {
-  button[0].init(pin_a);
-  button[1].init(pin_b);
-  button[2].init(pin_c);
-  button[3].init(pin_d);
+  button[0].init(pin_a); // D0 on remote receiver.
+  button[1].init(pin_b); // D1 on remote receiver.
+  button[2].init(pin_c); // D2 on remote receiver.
+  button[3].init(pin_d); // D3 on remote receiver.
 }
  
 Button* Remote::getButton(int button_ndx)
@@ -66,7 +66,13 @@ int Remote::getState()
   return ret;
 }
 
-boolean Remote::wait(int msec)
+void Remote::clear()
+{
+   for (int ii = 0; ii < 4; ++ii)
+     button[ii].getState();
+}
+
+boolean Remote::pause(int msec)
 {
   unsigned long now = millis();
   unsigned long start_time = now;
