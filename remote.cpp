@@ -15,7 +15,7 @@ void Button::init(int pin_num)
 
 int Button::getState()
 {
-  return lastread = digitalRead(pin);
+  return lastread = peekState();
 }
 
 int Button::peekState()
