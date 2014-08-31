@@ -74,9 +74,9 @@ void Pwm::off() {
 
 void Pwm::setNow(int val)
 {
-  _value = val;
+  _value = val; // Force no fade processing.
   setNewValue(val);
-  analogWrite(_pin, val);
+  update();
 }
 
 
