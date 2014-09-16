@@ -38,8 +38,8 @@ boolean Button::hasChanged()
 
 void Remote::init(int firstpin)
 {
-  for (int ii = 4; --ii > 0; )
-    button[ii].init(ii + firstpin);
+  for (int ii = 0; ii< 4; ++ii )
+    button[ii].init(3 - ii + firstpin);
 }
 
 void Remote::init(int pin_a, int pin_b, int pin_c, int pin_d)

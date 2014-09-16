@@ -10,6 +10,7 @@
 #define RED_PIN   10
 #define GREEN_PIN 11
 
+#define NUM_PUMPS 6
 #define FIRST_PUMP_PIN  3
 #define LAST_PUMP_PIN   (FIRST_PUM_PIN + NUM_PUMPS - 1)
 
@@ -45,7 +46,7 @@ void setup() {
 }
 
 
-boolean test = true;
+boolean test = false;
 int speed = 1000;
 
 void loop()
@@ -79,7 +80,7 @@ void loop()
     // BUTTON D: TEST PUMP AND LIGHTS
     if (remote.getButton(3)->hasChanged())
     {
-       D("Button 3 - DOING TEST");
+       Dln("Button 3 - DOING TEST");
        remote.getButton(3)->getState();
        test = true;       
        remote.clear();
@@ -92,7 +93,7 @@ void loop()
     // BUTTON B : Change Speed    
     if (remote.getButton(1)->hasChanged()) {
       
-       D("Button 1 - change speed");
+       Dln("Button 1 - change speed");
        remote.getButton(1)->getState();
        speed = speed != 0 ? 0 : 3000;
        rgb.setFadeSpeed(speed);
@@ -111,15 +112,15 @@ void loop()
       {
         rgb.randomColor();
         rgb.setNow();
-        int sensorValue = digitalRead(lightSensorPin);
+        int sensorValue = analogRead(lightSensorPin);
         D2("FLASH sensorValue = ", sensorValue);  
         if (pause( sensorValue / 1024.0 * 4000))
         {
-          D("Break out of flash");
+          Dln("Break out of flash");
           break;
         }
         rgb.allOff();
-        D("off");
+        Dln("off\n");
         if (pause(500))
           break;
       }
