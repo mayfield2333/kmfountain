@@ -36,9 +36,11 @@ class RGBLed {
     void setBlue(int);
     void setRGB(int red, int green, int blue);
     void allOff();
+    void off();
     void setWhite(int);
     void setFadeSpeed(int);
     void randomColor();
     void update();
+    void setNow();
     void test(Remote *remote);
 };

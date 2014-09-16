@@ -20,11 +20,12 @@ public:
   
   Button(int pin_num);  
   void init(int pin_num);
-  int getState();
+  int getState();  // Consumes the state change.
   
-  int peekState();
+  int peekState();  // simply reads state without clearing change state.s
   
-  boolean hasChanged();
+  boolean pressed();  // doesn't consume press.
+  boolean hasChanged();  // consumes the button press.
 };
 
 

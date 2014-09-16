@@ -15,7 +15,7 @@ int tint() {
 }
 
 void RGBLed::test(Remote *remote) {
-  int elapse = 3000;
+  int elapse = 500;
   Dln("RGBLED:test");
   setFadeSpeed(elapse/2);
   setRGB(255,0,0);
@@ -126,7 +126,7 @@ void RGBLed::setGreen(int val) {
 void RGBLed::setBlue(int val) {
   _bLed.setNewValue(val);
 }
-void RGBLed::allOff(){
+void RGBLed::allOff() {
   _rLed.off();
   _gLed.off();
   _bLed.off();
@@ -151,9 +151,19 @@ void RGBLed::setFadeSpeed(int speed) {
   _bLed.setFadeSpeed(speed);
 }
 
+void RGBLed::setNow() {
+  _rLed.setNow();
+  _gLed.setNow();
+  _bLed.setNow();
+}
+
 void RGBLed::update() {
   _rLed.update();
   _gLed.update();
   _bLed.update();
+}
+
+void RGBLed::off() {
+  allOff();
 }
 

@@ -24,8 +24,10 @@ class Pwm {
     void setFadeSpeed(int);
     void setNewValue(int value);
     void setNow(int value);
+    void setNow();
     int getNewValue();
     int getValue();
     void off();
+    void test();
 };
 #endif

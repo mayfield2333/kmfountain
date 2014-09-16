@@ -79,4 +79,16 @@ void Pwm::setNow(int val)
   update();
 }
 
+void Pwm::setNow()
+{
+  setNow(_newValue);
+}
 
+void Pwm::test()
+{
+  setNow(80);
+  delay(1000);
+  setNow(200);
+  delay(1000);
+  setNow(0);
+}

@@ -23,24 +23,31 @@ int Button::peekState()
   return digitalRead(pin);
 }
 
-boolean Button::hasChanged()
+boolean Button::pressed()
 {
   int val = peekState();
   return lastread != val;
 }
 
+boolean Button::hasChanged()
+{
+  int oldval = lastread;
+  int val = getState();
+  return oldval != val;
+}
+
 void Remote::init(int firstpin)
 {
-  for (int ii = 0; ii < 4; ++ii)
+  for (int ii = 4; --ii > 0; )
     button[ii].init(ii + firstpin);
 }
 
 void Remote::init(int pin_a, int pin_b, int pin_c, int pin_d)
 {
-  button[0].init(pin_a); // D0 on remote receiver.
-  button[1].init(pin_b); // D1 on remote receiver.
-  button[2].init(pin_c); // D2 on remote receiver.
-  button[3].init(pin_d); // D3 on remote receiver.
+  button[0].init(pin_d); // D0 on remote receiver.
+  button[1].init(pin_c); // D1 on remote receiver.
+  button[2].init(pin_b); // D2 on remote receiver.
+  button[3].init(pin_a); // D3 on remote receiver.
 }
  
 Button* Remote::getButton(int button_ndx)
@@ -53,7 +60,7 @@ boolean Remote::pressed()
   boolean ispressed = false;
   for (int b = 0; b < 4 && !ispressed; ++b)
   {
-    ispressed |= button[b].hasChanged();
+    ispressed |= button[b].pressed();
   }
   return ispressed;
 }
