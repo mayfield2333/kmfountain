@@ -6,7 +6,14 @@ void Fountain::init(int firstpin)
   for (int pp = 0; pp < size(); ++pp)
   {
    pump[pp].init(firstpin + pp);
-   pump[pp].test();
+  }
+}
+
+void Fountain::setFadeSpeed(int speed)
+{
+  for (int pp = 0; pp < size(); ++pp)
+  {
+   pump[pp].setFadeSpeed(speed);
   }
 }
 
@@ -27,3 +34,9 @@ void Fountain::off() {
   }
 }
 
+void Fountain::update() {
+  for (int pp = 0; pp < size(); ++pp)
+  {
+   pump[pp].update();
+  }
+}

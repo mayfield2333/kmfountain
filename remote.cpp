@@ -38,27 +38,37 @@ boolean Button::hasChanged()
 
 void Remote::init(int firstpin)
 {
-  for (int ii = 0; ii< 4; ++ii )
-    button[ii].init(3 - ii + firstpin);
+  for (int ii = 0; ii< NUM_BUTTONS; ++ii )
+    button[ii].init((NUM_BUTTONS - 1) - ii + firstpin);
 }
 
 void Remote::init(int pin_a, int pin_b, int pin_c, int pin_d)
 {
+  if (NUM_BUTTONS == 1)
+  {
+  button[0].init(pin_a); // D0 on remote receiver.
+  }
+  else
+  {
   button[0].init(pin_d); // D0 on remote receiver.
   button[1].init(pin_c); // D1 on remote receiver.
   button[2].init(pin_b); // D2 on remote receiver.
   button[3].init(pin_a); // D3 on remote receiver.
+  }
 }
  
 Button* Remote::getButton(int button_ndx)
 {
+  if (button_ndx > NUM_BUTTONS - 1)
+    return &button[0];
+    
   return &button[button_ndx];
 }
 
 boolean Remote::pressed()
 {
   boolean ispressed = false;
-  for (int b = 0; b < 4 && !ispressed; ++b)
+  for (int b = 0; b < NUM_BUTTONS && !ispressed; ++b)
   {
     ispressed |= button[b].pressed();
   }
@@ -68,14 +78,14 @@ boolean Remote::pressed()
 int Remote::getState()
 {
   int ret = 0;
-  for (int b = 0; b < 4; b++)
+  for (int b = 0; b < NUM_BUTTONS; b++)
     ret |= (button[b].getState() == HIGH ? 1 << b : 0);
   return ret;
 }
 
 void Remote::clear()
 {
-   for (int ii = 0; ii < 4; ++ii)
+   for (int ii = 0; ii < NUM_BUTTONS; ++ii)
      button[ii].getState();
 }
 

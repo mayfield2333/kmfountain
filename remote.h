@@ -28,6 +28,11 @@ public:
   boolean hasChanged();  // consumes the button press.
 };
 
+#if defined(__AVR_ATmega2560__)
+#define NUM_BUTTONS 4
+#else
+#define NUM_BUTTONS 1
+#endif
 
 class Remote {
   

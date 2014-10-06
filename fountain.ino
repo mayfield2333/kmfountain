@@ -4,8 +4,14 @@
 #include "remote.h"
 #include "led.h"
 #include "pump.h"
+#include "timer.h"
 
+#if defined(__AVR_ATmega2560__)
 #define REMOTE_PIN 22
+#else
+#define REMOTE_PIN 13
+#endif
+
 #define BLUE_PIN   9
 #define RED_PIN   10
 #define GREEN_PIN 11
@@ -23,14 +29,18 @@ Remote remote;
 RGBLed rgb;
 Fountain fountain;
 
-unsigned long change;
-boolean on = false;
+boolean fountainOn = false;
+boolean lightsOn = false;
+
+Timer change;
 
 void setup() {
   // USB can be used for Debug output.
   Serial.begin(9600);
   Dln("setup");
+  D2("Remote pin = ", REMOTE_PIN);
   remote.init(REMOTE_PIN);
+  remote.clear();
   
   pinMode(lightLedPin, OUTPUT);
   
@@ -38,20 +48,24 @@ void setup() {
   //rgb.test(&remote);
   
   fountain.init(FIRST_PUMP_PIN);
+  fountain.setFadeSpeed(10);
   //fountain.test(&remote);
   
-  change = millis();
+  change.setSeconds(10);
+  change.expire();
   randomSeed(analogRead(0));
+  
   Dln("end setup");
 }
 
 
-boolean test = false;
+boolean test = true;
 int speed = 1000;
 
 void loop()
 {
   
+#if defined(__AVR_ATmega2560__)
   if (remote.pressed())
   {
      Dln("Button pressed");
@@ -59,8 +73,8 @@ void loop()
     if (remote.getButton(0)->hasChanged())
     {
       Dln("Button 0");
-      on = !on;
-      if (!on)
+      fountainOn = !fountainOn;
+      if (!fountainOn)
       {
         rgb.off();
         fountain.off();
@@ -74,8 +88,8 @@ void loop()
     }
     
     // Turn on with any button;
-    if (!on)
-      on = true;
+    if (!fountainOn)
+      fountainOn = true;
 
     // BUTTON D: TEST PUMP AND LIGHTS
     if (remote.getButton(3)->hasChanged())
@@ -97,7 +111,7 @@ void loop()
        remote.getButton(1)->getState();
        speed = speed != 0 ? 0 : 3000;
        rgb.setFadeSpeed(speed);
-       change = millis() + 10000;
+       change.setSeconds(change.getSeconds() >10 ? 10 : 30);
     }
     else
     {
@@ -125,7 +139,7 @@ void loop()
           break;
       }
       Dln("End of flash");
-      change = 0;  // force change
+      change.expire();
       rgb.allOff();
     }
     else
@@ -133,38 +147,63 @@ void loop()
         Dln("Not Button 2");
     }
   }
+#else
+  if (remote.getButton(0)->peekState())
+  {
+     Dln("Button pressed 0");
+     // Wait for release.
+     while (remote.getButton(0)->getState() != 0)
+       delay(1);
+    // BUTTON D : Toggle Fountain ON/OFF?
+    remote.getButton(0)->hasChanged();
+    Dln("Button 0");
+    fountainOn = !fountainOn;
+  }
+  
+  if (test) {
+    rgb.test(&remote);
+    Dln("Start test");
+    remote.clear();
+    D2("remote getstate()=",remote.getState());
+    fountain.test(&remote);
+    Dln("End test");
+    if (remote.pressed())
+       Dln("Button was pressed?");
+    test = false;
+  }
+
+#endif
     
-   if (!on)
+   if (!fountainOn)
    {
      fountain.off();
      rgb.allOff();
      return;
-   }  
-   
-   if (test) {
-    rgb.test(&remote);
-    if (!remote.pressed())
-      fountain.test(&remote);
-    test = false;
-  }
-    
-  if (remote.pressed())
-  {
-    D("Pressed\n");
-    return;
-  }
+   }
   
-  if (millis() > change)
+  if (change.isNow())
   {
     D2(pause(1000), "Change time");
-    
-    int r;
-    change = millis() + changeDelay;
     rgb.randomColor();
+    
+    int pumpval;
+    for (int p = 0; p < NUM_PUMPS; ++p)
+    {
+      pumpval = random(30,256);
+      D("Pump ");
+      D3(p," = ", pumpval);
+      fountain.pump[p].setNewValue(pumpval);
+    }
+
+    pumpval = random(0,4) == 0 ? 128: 0;
+    D2("Pump 5 = ", pumpval);
+    fountain.pump[5].setNewValue(pumpval);
+    
     Dln();
   } 
     
   rgb.update();
+  fountain.update();
 }
 
 boolean pause(unsigned mills)
