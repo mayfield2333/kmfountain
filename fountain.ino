@@ -28,11 +28,14 @@ int lightSensorValue = 0;  // variable to store the value coming from the sensor
 Remote remote;
 RGBLed rgb;
 Fountain fountain;
+int mode = 0;
+int pattern = 0;
 
 boolean fountainOn = false;
 boolean lightsOn = false;
 
 Timer change;
+Timer patternChange;
 
 void setup() {
   // USB can be used for Debug output.
@@ -53,24 +56,29 @@ void setup() {
   
   change.setSeconds(10);
   change.expire();
+  patternChange.setSeconds(10);
   randomSeed(analogRead(0));
   
   Dln("end setup");
 }
 
 
-boolean test = true;
+boolean test = false;
 int speed = 1000;
 
 void loop()
 {
   
+  boolean pressA = remote.getButton(0)->getChange();
 #if defined(__AVR_ATmega2560__)
-  if (remote.pressed())
-  {
-     Dln("Button pressed");
+  boolean pressB = remote.getButton(1)->getChange();
+  boolean pressC = remote.getButton(2)->getChange();
+  boolean pressD = remote.getButton(3)->getChange();
+  boolean pressAny = pressB || pressC || pressD;
+  
+#endif  
     // BUTTON A : Toggle Fountain ON/OFF?
-    if (remote.getButton(0)->hasChanged())
+    if (pressA)
     {
       Dln("Button 0");
       fountainOn = !fountainOn;
@@ -82,96 +90,46 @@ void loop()
         return;
       }
     }
-    else
-    {
-      Dln("NOT Button 0");
-    }
-    
+#if defined(__AVR_ATmega2560__)
+
+  if (pressAny)
+  {  
     // Turn on with any button;
     if (!fountainOn)
       fountainOn = true;
 
-    // BUTTON D: TEST PUMP AND LIGHTS
-    if (remote.getButton(3)->hasChanged())
+    // BUTTON D: Lights on
+    if (pressD)
     {
-       Dln("Button 3 - DOING TEST");
-       remote.getButton(3)->getState();
-       test = true;       
-       remote.clear();
-    }
-    else
-    {
-      Dln("Not Button 3");
-    }
-       
-    // BUTTON B : Change Speed    
-    if (remote.getButton(1)->hasChanged()) {
-      
-       Dln("Button 1 - change speed");
-       remote.getButton(1)->getState();
-       speed = speed != 0 ? 0 : 3000;
-       rgb.setFadeSpeed(speed);
-       change.setSeconds(change.getSeconds() >10 ? 10 : 30);
-    }
-    else
-    {
-      Dln("Not BUTTON 1");
+       Dln("Button D -Lights");
+       lightsOn = !lightsOn;
     }
     
-    // BUTTON C : flash
-    if (remote.getButton(2)->hasChanged())
-    {
-      Dln("Button 2 - flash");
-      while (!remote.pressed())
-      {
-        rgb.randomColor();
-        rgb.setNow();
-        int sensorValue = analogRead(lightSensorPin);
-        D2("FLASH sensorValue = ", sensorValue);  
-        if (pause( sensorValue / 1024.0 * 4000))
-        {
-          Dln("Break out of flash");
-          break;
-        }
-        rgb.allOff();
-        Dln("off\n");
-        if (pause(500))
-          break;
-      }
-      Dln("End of flash");
-      change.expire();
-      rgb.allOff();
+    // BUTTON B : Mode   
+    if (pressB) {
+       Dln("Button 1 - speed");
+       change.setSeconds(change.getSeconds() >10 ? 10 : 30);
     }
-    else
+
+    // BUTTON C : mode
+    if (pressC)
     {
-        Dln("Not Button 2");
+      Dln("Button 2 - mode");
+      if (++mode > 2)
+         mode = 0;
+         
+      pattern = mode;
     }
-  }
-#else
+ #else
   if (remote.getButton(0)->peekState())
   {
      Dln("Button pressed 0");
      // Wait for release.
-     while (remote.getButton(0)->getState() != 0)
-       delay(1);
-    // BUTTON D : Toggle Fountain ON/OFF?
-    remote.getButton(0)->hasChanged();
-    Dln("Button 0");
-    fountainOn = !fountainOn;
+     if (++mode > 2)
+         mode = 0;
+      pattern = mode;
   }
-  
-  if (test) {
-    rgb.test(&remote);
-    Dln("Start test");
-    remote.clear();
-    D2("remote getstate()=",remote.getState());
-    fountain.test(&remote);
-    Dln("End test");
-    if (remote.pressed())
-       Dln("Button was pressed?");
-    test = false;
-  }
-
+ 
 #endif
     
    if (!fountainOn)
@@ -180,7 +138,10 @@ void loop()
      rgb.allOff();
      return;
    }
-  
+ 
+  if (pattern == 0)
+    pattern = random(0,2);
+    
   if (change.isNow())
   {
     D2(pause(1000), "Change time");

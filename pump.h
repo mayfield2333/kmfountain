@@ -18,6 +18,7 @@ public:
   void test(Remote *);
   void off();
   void update();
+  void setFadeSpeed(int speed);
   int size() { return NUM_FOUNTAIN_PUMPS; };
 };
   
