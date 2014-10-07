@@ -13,6 +13,10 @@
 class Button {
   int pin;
   int lastread;
+#if !defined(__AVR_ATmega2560__)
+  // This isn't specific to Uno but rather my test board doesn't have a latching switch
+  int fakelatch;
+#endif
   
 public:
   

@@ -20,7 +20,10 @@
 #define FIRST_PUMP_PIN  3
 #define LAST_PUMP_PIN   (FIRST_PUM_PIN + NUM_PUMPS - 1)
 
-int changeDelay = 5000;
+int patternChangeSeconds = 120;
+int colorChangeSeconds = 10;
+int internalPatternChangeSeconds = 2;
+
 int lightSensorPin = A0;    // select the input pin for the potentiometer
 int lightLedPin = 13;      // select the pin for the LED
 int lightSensorValue = 0;  // variable to store the value coming from the sensor
@@ -30,12 +33,14 @@ RGBLed rgb;
 Fountain fountain;
 int mode = 0;
 int pattern = 0;
+int pattern_one_state = 0;
 
 boolean fountainOn = false;
 boolean lightsOn = false;
 
 Timer change;
 Timer patternChange;
+Timer internalPatternChange;
 
 void setup() {
   // USB can be used for Debug output.
@@ -43,7 +48,6 @@ void setup() {
   Dln("setup");
   D2("Remote pin = ", REMOTE_PIN);
   remote.init(REMOTE_PIN);
-  remote.clear();
   
   pinMode(lightLedPin, OUTPUT);
   
@@ -51,12 +55,14 @@ void setup() {
   //rgb.test(&remote);
   
   fountain.init(FIRST_PUMP_PIN);
-  fountain.setFadeSpeed(10);
+  fountain.setFadeSpeed(5);
   //fountain.test(&remote);
   
-  change.setSeconds(10);
+  change.setSeconds(colorChangeSeconds);
   change.expire();
-  patternChange.setSeconds(10);
+  patternChange.setSeconds(patternChangeSeconds);
+  
+  internalPatternChange.setSeconds(internalPatternChangeSeconds);
   randomSeed(analogRead(0));
   
   Dln("end setup");
@@ -77,6 +83,8 @@ void loop()
   boolean pressAny = pressB || pressC || pressD;
   
 #endif  
+
+#if defined(__AVR_ATmega2560__)
     // BUTTON A : Toggle Fountain ON/OFF?
     if (pressA)
     {
@@ -90,7 +98,6 @@ void loop()
         return;
       }
     }
-#if defined(__AVR_ATmega2560__)
 
   if (pressAny)
   {  
@@ -121,48 +128,102 @@ void loop()
       pattern = mode;
     }
   }
- #else
-  if (remote.getButton(0)->peekState())
-  {
-     Dln("Button pressed 0");
-     // Wait for release.
-     if (++mode > 2)
-         mode = 0;
-      pattern = mode;
-  }
- 
+
 #endif
     
-   if (!fountainOn)
-   {
-     fountain.off();
-     rgb.allOff();
-     return;
-   }
    
    int sensorValue = analogRead(lightSensorPin);
    if (lightsOn || sensorValue < 300)
      lightsOn = true;
    
-
  
-  if (pattern == 0 || (patternChange.isNow() && mode == 0))
+   if (pressA) 
   {
-    pattern = random(0,2);
+    Dln("Press A, pattern change");
+    D2("Old Pattern = ", pattern);
+    if (mode == 0)
+    {
+      mode = pattern = 1;
+      D2("mode and pattern = ", mode);
+    }
+    else if ((mode = ++pattern) > 3)
+    {
+      mode = pattern = 0;
+    }
+
+    D2("New pattern = ",pattern);
+    D2("current mode = ", mode);
+    internalPatternChange.expire();
+    pattern_one_state = 10;
+  }
+ 
+  if (pattern == 0 || (mode == 0 && patternChange.isNow()))
+  {
+    D("Mode 0 and patternChange is now()");
+    pattern = random(1,4);
+    D2("Random pattern = ",pattern);
     change.expire();
   }
-    
+  
+   
   if (change.isNow())
   {
     D2(pause(1000), "Change time");
     rgb.randomColor();
-    
+  }
+  
+  if (internalPatternChange.isNow())
+  {
     if (pattern == 1) // random height
     {
-      int pumpval;
-      for (int p = 0; p < NUM_PUMPS; ++p)
+      Dln("Pattern 1");
+      if (++pattern_one_state >= 10)
       {
-        pumpval = random(30,256);
+        fountain.off();
+        pattern_one_state = 0;
+      }
+      
+      D2("Pattern state = ", pattern_one_state);
+      switch (pattern_one_state)
+      {
+          case 0:
+          case 1:
+          case 2:
+          case 3:
+          case 4:
+            fountain.pump[pattern_one_state].setNow(255);
+            fountain.pump[5].setNow(0);
+            break;
+
+          case 5:
+          case 6:
+          case 7:
+          case 8:
+            fountain.pump[pattern_one_state - 5].setNow(0);
+            break;
+          case 9:
+            fountain.pump[pattern_one_state - 5].setNow(0);
+            fountain.pump[5].setNewValue(255);
+            break;
+      }
+    }
+    
+    else if (pattern == 2) // random on
+    {
+      Dln("Pattern 2");
+      int pumpnum = random(0,6);
+      int maxvalue = pumpnum == 5 ? 128 : 255;
+      
+      fountain.off();
+      fountain.pump[pumpnum].setNewValue(maxvalue);
+    }
+    else if (pattern == 3)
+    {  
+      Dln("Pattern 3");
+      int pumpval;
+      for (int p = 0; p < NUM_PUMPS - 1; ++p)
+      {
+        pumpval = random(50,256);
         D("Pump ");
         D3(p," = ", pumpval);
         fountain.pump[p].setNewValue(pumpval);
@@ -172,16 +233,6 @@ void loop()
       D2("Pump 5 = ", pumpval);
       fountain.pump[5].setNewValue(pumpval);
     }
-    else if (pattern == 2) // random on
-    {
-      int pumpnum = random(0,6);
-      int maxvalue = pumpnum == 5 ? 128 : 255;
-      
-      fountain.off();
-      fountain.pump[pumpnum].setNewValue(maxvalue);
-    }
-    
-    Dln();
   } 
     
   if (lightsOn)

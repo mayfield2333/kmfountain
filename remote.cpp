@@ -1,6 +1,9 @@
 #include "Arduino.h"
 #include "remote.h"
+
+#define debug false
 #include "debug.h"
+
 
 Button::Button(int pin_num)
 {
@@ -11,6 +14,8 @@ void Button::init(int pin_num)
 {
   pinMode(pin = pin_num, INPUT);
   lastread = digitalRead(pin);
+  D("INIT : digital read pin/val is ");
+  D3(pin, "=", lastread);
 }
 
 int Button::getState()
@@ -20,7 +25,24 @@ int Button::getState()
 
 int Button::peekState()
 {
+#if defined(__AVR_ATmega2560__)
   return digitalRead(pin);
+#else
+  D2("peekState pin ",pin);
+  int val = digitalRead(pin);
+  D2("real digitalRead = ", val);
+  int last = -1;
+  if (val == HIGH)
+    D2("Initial read = ", val);
+  while ((last = digitalRead(pin)) == HIGH)
+      ;
+  if (val == HIGH)
+    D2("Last read = ", last);
+    
+  if (val == HIGH)
+    fakelatch = fakelatch != LOW ? LOW : HIGH;
+  return fakelatch;
+#endif
 }
 
 boolean Button::pressed()
@@ -38,14 +60,21 @@ boolean Button::hasChanged()
 
 void Remote::init(int firstpin)
 {
+  D2("Remote Init : first pin =",firstpin);
   for (int ii = 0; ii< NUM_BUTTONS; ++ii )
-    button[ii].init((NUM_BUTTONS - 1) - ii + firstpin);
+  {
+    int pin;
+    button[ii].init(pin = (NUM_BUTTONS - 1) - ii + firstpin);
+    D2("Init button pin ", pin);
+  }
 }
 
 void Remote::init(int pin_a, int pin_b, int pin_c, int pin_d)
 {
+  Dln("Remote init");
   if (NUM_BUTTONS == 1)
   {
+  Dln("Init remote one button");
   button[0].init(pin_a); // D0 on remote receiver.
   }
   else

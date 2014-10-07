@@ -30,5 +30,6 @@ class Pwm {
     int getValue();
     void off();
     void test();
+    void writePin(int value);
 };
 #endif

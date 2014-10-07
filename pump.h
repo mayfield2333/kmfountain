@@ -4,7 +4,9 @@
 #ifndef PUMP_H
 #define PUMP_H
 
-class Pump  : public Pwm {    
+class Pump  : public Pwm { 
+public:  
+   void init(int pin); 
 };
 
 #define NUM_FOUNTAIN_PUMPS 6

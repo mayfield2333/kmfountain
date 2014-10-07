@@ -48,8 +48,42 @@ void Pwm::update() {
      }
    }
    // write output value;
-   analogWrite(_pin, newval);
+   writePin(newval);
 }
+
+void Pwm::writePin(int newval)
+{
+#if defined(__AVR_ATmega2560__)
+  analogWrite(_pin, newval);
+#else
+  switch(_pin)
+  {
+    // anlogwrite capable pins:
+    case 3:
+    case 5:
+    case 6:
+    case 9:
+    case 10:
+    case 11:
+      analogWrite(_pin, newval);
+      break;
+    
+      // digital only pins
+    case 4:
+    case 7:
+    case 8:  
+    default:
+       // simulate pwm for non-pwm pins
+       int digitalval;
+       digitalWrite(_pin, digitalval = (millis() % 256 < newval) ? HIGH : LOW);
+       if (digitalval < newval)
+       D2("Simulated analog", digitalval);
+       break;
+  }
+ 
+#endif
+}
+
 
 void Pwm::setFadeSpeed(int speed){
   _fadeSpeed = speed;
