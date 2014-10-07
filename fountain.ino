@@ -69,11 +69,11 @@ int speed = 1000;
 void loop()
 {
   
-  boolean pressA = remote.getButton(0)->getChange();
+  boolean pressA = remote.getButton(0)->hasChanged();
 #if defined(__AVR_ATmega2560__)
-  boolean pressB = remote.getButton(1)->getChange();
-  boolean pressC = remote.getButton(2)->getChange();
-  boolean pressD = remote.getButton(3)->getChange();
+  boolean pressB = remote.getButton(1)->hasChanged();
+  boolean pressC = remote.getButton(2)->hasChanged();
+  boolean pressD = remote.getButton(3)->hasChanged();
   boolean pressAny = pressB || pressC || pressD;
   
 #endif  
@@ -120,6 +120,7 @@ void loop()
          
       pattern = mode;
     }
+  }
  #else
   if (remote.getButton(0)->peekState())
   {
@@ -138,32 +139,53 @@ void loop()
      rgb.allOff();
      return;
    }
+   
+   int sensorValue = analogRead(lightSensorPin);
+   if (lightsOn || sensorValue < 300)
+     lightsOn = true;
+   
+
  
-  if (pattern == 0)
+  if (pattern == 0 || (patternChange.isNow() && mode == 0))
+  {
     pattern = random(0,2);
+    change.expire();
+  }
     
   if (change.isNow())
   {
     D2(pause(1000), "Change time");
     rgb.randomColor();
     
-    int pumpval;
-    for (int p = 0; p < NUM_PUMPS; ++p)
+    if (pattern == 1) // random height
     {
-      pumpval = random(30,256);
-      D("Pump ");
-      D3(p," = ", pumpval);
-      fountain.pump[p].setNewValue(pumpval);
-    }
+      int pumpval;
+      for (int p = 0; p < NUM_PUMPS; ++p)
+      {
+        pumpval = random(30,256);
+        D("Pump ");
+        D3(p," = ", pumpval);
+        fountain.pump[p].setNewValue(pumpval);
+      }
 
-    pumpval = random(0,4) == 0 ? 128: 0;
-    D2("Pump 5 = ", pumpval);
-    fountain.pump[5].setNewValue(pumpval);
+      pumpval = random(0,4) == 0 ? 128: 0;
+      D2("Pump 5 = ", pumpval);
+      fountain.pump[5].setNewValue(pumpval);
+    }
+    else if (pattern == 2) // random on
+    {
+      int pumpnum = random(0,6);
+      int maxvalue = pumpnum == 5 ? 128 : 255;
+      
+      fountain.off();
+      fountain.pump[pumpnum].setNewValue(maxvalue);
+    }
     
     Dln();
   } 
     
-  rgb.update();
+  if (lightsOn)
+    rgb.update();
   fountain.update();
 }
 
