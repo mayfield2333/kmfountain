@@ -3,7 +3,7 @@
 
 void Pump::init(int pin) {
   Pwm::init(pin);
-  _min = 30;
+  _min = 60;
 }
 
 void Fountain::init(int firstpin)

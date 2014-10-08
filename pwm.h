@@ -8,7 +8,7 @@ class Pwm {
     int _pin;
     int _value;
     int _newValue;
-    int _fadeSpeed;
+    unsigned int _fadeSpeed;  // In milliseconds.
     int _min;
     unsigned long _startTime;  // time new value was set.
     
@@ -22,7 +22,7 @@ class Pwm {
     
     // Update LED based on current time and fadespeed.
     void update();
-    void setFadeSpeed(int);
+    void setFadeSpeed(unsigned int);  // In Seconds.
     void setNewValue(int value);
     void setNow(int value);
     void setNow();

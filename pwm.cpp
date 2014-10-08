@@ -53,6 +53,11 @@ void Pwm::update() {
 
 void Pwm::writePin(int newval)
 {
+  if (newval  // on
+      && _min  // Minimum value specified
+      && _min > newval)  // new value is less than min then use min.
+    newval = _min;
+    
 #if defined(__AVR_ATmega2560__)
   analogWrite(_pin, newval);
 #else
@@ -85,8 +90,8 @@ void Pwm::writePin(int newval)
 }
 
 
-void Pwm::setFadeSpeed(int speed){
-  _fadeSpeed = speed;
+void Pwm::setFadeSpeed(unsigned int speed){
+  _fadeSpeed = speed * 1000U;
 }
 
 void Pwm::setNewValue(int value){
