@@ -15,12 +15,23 @@ void Timer::reset()
   eventHappened = false;
 }
 
+void Timer::off()
+{
+  active = false;
+}
+
+void Timer::on()
+{
+  reset();
+}
+
 /**
 * Set the event time in seconds;
 */
 void Timer::setSeconds(unsigned int seconds)
 {
   delaytime = ((unsigned long) seconds) * 1000;
+  on();
 }
 
 unsigned int Timer::getSeconds()

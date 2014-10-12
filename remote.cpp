@@ -20,7 +20,9 @@ void Button::init(int pin_num)
 
 int Button::getState()
 {
-  return lastread = peekState();
+  lastread = peekState();
+  D2("getState Lastread = ",lastread);
+  return lastread;
 }
 
 int Button::peekState()
@@ -32,15 +34,20 @@ int Button::peekState()
   int val = digitalRead(pin);
   D2("real digitalRead = ", val);
   int last = -1;
-  if (val == HIGH)
-    D2("Initial read = ", val);
+  if (val == LOW)
+  {
+    D2("return fakelatch because val =",val);
+    return fakelatch;
+  }
+    
+  D2("Initial read = ", val);
   while ((last = digitalRead(pin)) == HIGH)
       ;
-  if (val == HIGH)
-    D2("Last read = ", last);
+      
+  D2("Last read = ", last);
     
-  if (val == HIGH)
-    fakelatch = fakelatch != LOW ? LOW : HIGH;
+  fakelatch = fakelatch != LOW ? LOW : HIGH;
+  D2("peekState : fakelatch =",fakelatch);
   return fakelatch;
 #endif
 }

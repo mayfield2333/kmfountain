@@ -1,5 +1,5 @@
 #include "Arduino.h"
-#define debug true
+#define debug false
 #include "debug.h"
 #include "remote.h"
 #include "led.h"
@@ -34,6 +34,7 @@ Remote remote;
 RGBLed rgb;
 Fountain fountain;
 int mode = 0;
+int colormode = 0;
 int pattern = 0;
 int pattern_one_state = 0;
 
@@ -77,25 +78,36 @@ int speed = 1000;
 
 void loop()
 {
-  
+  boolean pressAny = false;
   boolean pressA = remote.getButton(0)->hasChanged();
+ 
 #if defined(__AVR_ATmega2560__)
   boolean pressB = remote.getButton(1)->hasChanged();
   boolean pressC = remote.getButton(2)->hasChanged();
   boolean pressD = remote.getButton(3)->hasChanged();
-  boolean pressAny = pressA || pressB || pressC || pressD;
-  
-  if (pressAny)
-  {  
+  pressAny = pressA || pressB || pressC || pressD;
+#else 
+  pressAny = pressA;
+#endif
+
+  if (pressAny || pressA)
+  { 
     // Turn on with any button;
     if (!fountainOn)
     {
+      Dln("Fountain turning on");
       internalPatternChange.expire();
       patternChange.expire();
-      mode = 0;
+      mode = 0;  // Random patterns
+      colormode = 0; // Normal Random colors.
     }
       
     fountainOn = true;
+  }
+  else
+    Dln("Nothing pressed");
+    
+#if defined(__AVR_ATmega2560__)
 
     // BUTTON D: Lights on
     if (pressD)
@@ -104,16 +116,33 @@ void loop()
        lightsOn = !lightsOn;
     }
     
-    // BUTTON C : mode
+    // BUTTON C : Color mode/set
     if (pressC)
     {
-      Dln("Button 2 - mode");
-      if (++mode > 2)
-         mode = 0;
-         
-      pattern = mode;
+      Dln("press c");
+      if (++colormode > 2)
+      {
+        Dln("Random color mode");
+        colormode = 0;  // random
+        change.setSeconds(colorChangeSeconds);
+        rgb.setFadeSpeed(lightfade);
+      }
+       
+      Dln("Button C - COLOR mode");
+      if (colormode == 1)
+      {
+        // Rapid change
+        Dln("Rapid color change mode");
+        change.setSeconds(4);
+        rgb.setFadeSpeed(1);
+      }
+      
+      if(colormode == 2)
+      {
+        Dln("Hold color");
+        change.off();
+      }
     }
-  }
 
     // BUTTON B : Toggle Fountain ON/OFF?
     if (pressB)
@@ -122,11 +151,11 @@ void loop()
       fountainOn = false;
     }
 
-
 #endif
 
    if (!fountainOn)
    {
+      Dln("Fountain off");
       rgb.off();
       fountain.off();
       return;
@@ -136,12 +165,14 @@ void loop()
    if (lightsOn || sensorValue < 300)
      lightsOn = true;
  
-   if (pressA) 
+#define NUM_PATTERNS 4
+  if (pressA) 
   {
+   Dln("Press A"); 
     fountain.off();
     if (remote.pause(500))
       return;
-    fountain.pump[2].setNow(255);
+    fountain.pump[5].setNow(255);
     if (remote.pause(500))
       return;
     fountain.off();
@@ -152,13 +183,20 @@ void loop()
       mode = pattern = 1;
       D2("mode and pattern = ", mode);
     }
-    else if ((mode = ++pattern) > 3)
+    else if ((mode = ++pattern) > NUM_PATTERNS)
     {
       mode = pattern = 0;
     }
 
     D2("New pattern = ",pattern);
     D2("current mode = ", mode);
+    fountain.off();
+    fountain.pump[pattern].setNow(255);
+    if (remote.pause(500))
+       return;
+    fountain.off();
+
+    internalPatternChange.setSeconds(internalPatternChangeSeconds);
     internalPatternChange.expire();
     pattern_one_state = 10;
   }
@@ -166,7 +204,7 @@ void loop()
   if (pattern == 0 || (mode == 0 && patternChange.isNow()))
   {
     D("Mode 0 and patternChange is now()");
-    pattern = random(1,4);
+    pattern = random(1,NUM_PATTERNS + 1);
     D2("Random pattern = ",pattern);
     change.expire();
   }
@@ -236,6 +274,25 @@ void loop()
       }
 
       pumpval = random(0,4) == 0 ? 128: 0;
+      D2("Pump 5 = ", pumpval);
+      fountain.pump[5].setNewValue(pumpval);
+    }
+    else if (pattern == 4)
+    {  
+      internalPatternChange.setSeconds(3);
+      Dln("Pattern 4");
+      int pumpval;
+      int pumpon = random(0,NUM_PUMPS * 2);  // Skip a couple turns.
+      for (int p = 0; p < NUM_PUMPS - 1; ++p)
+      {
+        if (p == pumpon)
+          fountain.pump[p].setNow(255);
+        else
+          fountain.pump[p].setNewValue(0);
+      }
+      D2("Pump on: ",pumpon);
+
+      pumpval = random(0,100) >50 ? 128: 0;
       D2("Pump 5 = ", pumpval);
       fountain.pump[5].setNewValue(pumpval);
     }

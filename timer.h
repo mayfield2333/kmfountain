@@ -26,6 +26,8 @@ public:
   void setMinutes(unsigned int minutes);
   unsigned int getSeconds();
   void expire();
+  void off();
+  void on();
   boolean isPending();
   boolean isNow();
 };  
