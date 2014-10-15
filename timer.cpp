@@ -75,3 +75,8 @@ void Timer::expire()
 {
   eventHappened = true;
 }
+
+unsigned long Timer::getMinutes()
+{
+  return getSeconds() / 60;
+}

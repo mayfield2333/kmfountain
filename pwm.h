@@ -6,6 +6,7 @@
 class Pwm {
   protected:
     int _pin;
+    int _currentValue;
     int _value;
     int _newValue;
     unsigned int _fadeSpeed;  // In milliseconds.

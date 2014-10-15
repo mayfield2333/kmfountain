@@ -30,6 +30,7 @@ public:
   void on();
   boolean isPending();
   boolean isNow();
+  unsigned long getMinutes();
 };  
 
 #endif

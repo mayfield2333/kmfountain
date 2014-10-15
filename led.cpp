@@ -1,5 +1,5 @@
 #include "led.h"
-#define debug true
+#define debug false
 #include "debug.h"
 #include "Arduino.h"
 

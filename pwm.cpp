@@ -9,7 +9,7 @@ Pwm::Pwm(int pin){
 
 void Pwm::init(int pin) {
   _pin = pin;
-  _min = _value = _newValue = _fadeSpeed = 0;
+  _min = _currentValue = _value = _newValue = _fadeSpeed = 0;
   pinMode(pin, OUTPUT); 
   setNow(0);
 }
@@ -22,28 +22,32 @@ void Pwm::update() {
    {
      // Compute elapsed time
      unsigned long current = millis();
+     D("Pin ");D(_pin);D(" Times: "); D("_startTime=");D(_startTime);D(" current=");Dln(current);
+
      long elapsed = (current - _startTime);
-     
+     D("Pin ");D(_pin);D2(" elapsed time=",elapsed);
+     D("Pin ");D(_pin);D2(" fade time=",_fadeSpeed);
      // Past fade speed? then done fading
-     if (elapsed > _fadeSpeed || _fadeSpeed == 0) {
+     if (current < _startTime || elapsed > _fadeSpeed) {
+       _startTime = current;
        _value = _newValue;
-       D2("elapsed time\n_value=",_value);
+        D("Pin ");D(_pin);D2(" elapsed time\n_value=",_value);
      }
      else {
        // compute percentage into fade time.
        long percent = elapsed * 100L / _fadeSpeed;
-       D2("percent = ",percent);
-       D2("value=",_value);
+       D("Pin ");D(_pin); D2(" percent = ",percent);
+       D("Pin ");D(_pin); D2(" value=",_value);
        // compute porpotional adjustment to value;
-       int val = getValue();
-       newval = val + (_newValue - val) * percent / 100;
-       D2("newval=",newval);
+
+       newval = _value + (_newValue - _value) * percent / 100;
        if (newval > 255)
          newval = 255;
          
        if (newval < 0)
          newval = 0;
          
+       D("Pin ");D(_pin); D2(" newval=",newval);       
        Dln();
      }
    }
@@ -53,8 +57,8 @@ void Pwm::update() {
 
 void Pwm::writePin(int newval)
 {
+  _currentValue = newval;
   if (newval  // on
-      && _min  // Minimum value specified
       && _min > newval)  // new value is less than min then use min.
     newval = _min;
     
@@ -80,9 +84,8 @@ void Pwm::writePin(int newval)
     default:
        // simulate pwm for non-pwm pins
        int digitalval;
-       digitalWrite(_pin, digitalval = (millis() % 256 < newval) ? HIGH : LOW);
-       if (digitalval < newval)
-       D2("Simulated analog", digitalval);
+       digitalWrite(_pin, digitalval = newval && (millis() % 256 <= newval) ? HIGH : LOW);
+       //D4("Simulated analog pin ", _pin, " value=", digitalval);
        break;
   }
  
@@ -95,7 +98,10 @@ void Pwm::setFadeSpeed(unsigned int speed){
 }
 
 void Pwm::setNewValue(int value){
+  if (value == _newValue)
+    return;
   _newValue = value;
+  _value = _currentValue;
   _startTime = millis();
 }
 
@@ -104,7 +110,7 @@ int Pwm::getNewValue(){
 }
 
 int Pwm::getValue(){
-  return _value;
+  return _currentValue;
 }
 
 void Pwm::off() {
@@ -113,7 +119,7 @@ void Pwm::off() {
 
 void Pwm::setNow(int val)
 {
-  _value = val; // Force no fade processing.
+  _value = _currentValue = val; // Force no fade processing.
   setNewValue(val);
   update();
 }

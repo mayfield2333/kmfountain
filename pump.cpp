@@ -1,5 +1,7 @@
 
 #include "pump.h"
+#define debug true
+#include "debug.h"
 
 void Pump::init(int pin) {
   Pwm::init(pin);
@@ -44,4 +46,16 @@ void Fountain::update() {
   {
    pump[pp].update();
   }
+}
+
+char Fountain::displayValue() 
+{
+    D("Pumps[0-n] = ");
+    for (int p = 0; p < size(); ++p)
+    {
+      D(" ");
+      D(pump[p].getValue());
+   }
+   Dln("");
+   delay(500);   
 }
