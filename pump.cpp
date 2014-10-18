@@ -5,7 +5,7 @@
 
 void Pump::init(int pin) {
   Pwm::init(pin);
-  _min = 90;
+  _min = 128;
 }
 
 void Fountain::init(int firstpin)
@@ -59,3 +59,4 @@ char Fountain::displayValue()
    Dln("");
    delay(500);   
 }
+
