@@ -14,6 +14,11 @@ void Pwm::init(int pin) {
   setNow(0);
 }
 
+void Pwm::setMin(int min)
+{
+  _min = min;
+}
+
 // Update PWM pin based on current time and fadeSpeed.
 void Pwm::update() {
   int newval = _newValue;
@@ -57,10 +62,15 @@ void Pwm::update() {
 
 void Pwm::writePin(int newval)
 {
-  _currentValue = newval;
   if (newval  // on
-      && _min > newval)  // new value is less than min then use min.
-    newval = _min;
+      && _min > newval)  // new value is less than min then off
+  {
+    D3("newval=",newval," is less than min.  forcing off");
+    newval = 0;
+    _value = _newValue = 0;
+  }
+
+  _currentValue = newval;
     
 #if defined(__AVR_ATmega2560__)
   analogWrite(_pin, newval);
@@ -98,8 +108,29 @@ void Pwm::setFadeSpeed(unsigned int speed){
 }
 
 void Pwm::setNewValue(int value){
+  D("pwm::setNewValue[_pin=");
+  D4( _pin,"](",value,")");
+  int rawvalue = value;
+  // Need to adjust for minimum value?
+  if (_min != 0)
+  {
+    if (value == 0 && _currentValue != 0)  // Turning off?
+      value = _min -1;      // Set to allow fade speed.
+    else if (value != 255) // Scale
+      value = _min + value * (255L - _min + 1) / 256;
+      
+    if (rawvalue && _currentValue == 0)  // Turning On?
+      _currentValue = _min;           // Set to allow for fade speed.
+      
+    D4("Adjusting value ", rawvalue, " to ", value);
+  }
+
   if (value == _newValue)
+  {
+    Dln("No change in value");
     return;
+  }
+  
   _newValue = value;
   _value = _currentValue;
   _startTime = millis();

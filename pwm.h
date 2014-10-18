@@ -32,5 +32,6 @@ class Pwm {
     void off();
     void test();
     void writePin(int value);
+    void setMin(int min);
 };
 #endif
