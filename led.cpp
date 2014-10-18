@@ -14,6 +14,12 @@ int tint() {
   return random(0,30);
 }
 
+void Led::setNewValue(int value)
+{
+  D4("Led[pin=",_pin,"]::setNewValue = ", value);
+  Pwm::setNewValue(value);
+}
+
 void RGBLed::test(Remote *remote) {
   int elapse = 1000;
   Dln("RGBLED:test");

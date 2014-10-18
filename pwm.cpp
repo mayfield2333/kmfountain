@@ -9,7 +9,7 @@ Pwm::Pwm(int pin){
 
 void Pwm::init(int pin) {
   _pin = pin;
-  _min = _currentValue = _value = _newValue = _fadeSpeed = 0;
+  _min = _rawValue = _currentValue = _value = _newValue = _fadeSpeed = 0;
   pinMode(pin, OUTPUT); 
   setNow(0);
 }
@@ -78,15 +78,16 @@ void Pwm::writePin(int newval)
   switch(_pin)
   {
     // anlogwrite capable pins:
-    case 3:
-    case 5:
-    case 6:
     case 9:
     case 10:
     case 11:
       analogWrite(_pin, newval);
       break;
     
+      // Pwm Pins but treat as digital for consistent diplay.
+    case 3:
+    case 5:
+    case 6:
       // digital only pins
     case 4:
     case 7:
@@ -110,7 +111,7 @@ void Pwm::setFadeSpeed(unsigned int speed){
 void Pwm::setNewValue(int value){
   D("pwm::setNewValue[_pin=");
   D4( _pin,"](",value,")");
-  int rawvalue = value;
+  int rawvalue = _rawValue = value;
   // Need to adjust for minimum value?
   if (_min != 0)
   {
@@ -142,6 +143,10 @@ int Pwm::getNewValue(){
 
 int Pwm::getValue(){
   return _currentValue;
+}
+
+int Pwm::getRawValue(){
+  return _rawValue;
 }
 
 void Pwm::off() {

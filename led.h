@@ -6,6 +6,8 @@ class Led  : public Pwm {
     public:
       Led() : Pwm() {};
 
+    void setNewValue(int value);
+
   /*
   
     Led(int pin);
@@ -15,7 +17,6 @@ class Led  : public Pwm {
     // Update LED based on current time and fadespeed.
     void update();
     void setFadeSpeed(int);
-    void setNewValue(int value);
     void setNow(int value);
     int getNewValue();
     int getValue();

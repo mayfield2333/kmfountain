@@ -12,6 +12,7 @@ class Pwm {
     unsigned int _fadeSpeed;  // In milliseconds.
     int _min;
     unsigned long _startTime;  // time new value was set.
+    int _rawValue;            // raw new value;
     
 
   public:
@@ -29,6 +30,7 @@ class Pwm {
     void setNow();
     int getNewValue();
     int getValue();
+    int getRawValue();
     void off();
     void test();
     void writePin(int value);

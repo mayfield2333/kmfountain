@@ -34,11 +34,11 @@ static const int lightSensorValue = 0;  // variable to store the value coming fr
 
 //#if defined(__AVR_ATmega2560__)
 static const int patternChangeSeconds = 120;
-static const int colorChangeSeconds = 60;
-static const int internalPatternChangeSeconds = 20;
+static const int colorChangeSeconds = 10;
+static const int internalPatternChangeSeconds = 15;
 static const int pumpfade = 4;
-static const int lightfade = 10;
-static const long autoOffMinutes = 90;
+static const int lightfade = 3;
+static const long autoOffMinutes = 120;
 /*
 #else
 static const int patternChangeSeconds = 60;
@@ -53,9 +53,13 @@ int mode = 0;
 int colormode = 0;
 int pattern = 0;
 int pattern_one_state = 0;
+const int p5reset = 11;
+int p5state = 0;
+int p5previous = 0;
 
 boolean fountainOn = false;
 boolean lightsOn = false;
+boolean forceLightsOn = false;
 
 /*
   Fountain sensors and actuators
@@ -114,14 +118,19 @@ void loop()
 {
   boolean pressAny = false;
   boolean pressA = remote.getButton(0)->hasChanged();
+  boolean pressB = false;
+  boolean pressC = false;
+  boolean pressD = false;
  
 #if defined(__AVR_ATmega2560__)
-  boolean pressB = remote.getButton(1)->hasChanged();
-  boolean pressC = remote.getButton(2)->hasChanged();
-  boolean pressD = remote.getButton(3)->hasChanged();
+  pressB = remote.getButton(1)->hasChanged();
+  pressC = remote.getButton(2)->hasChanged();
+  pressD = remote.getButton(3)->hasChanged();
   pressAny = pressA /*|| pressB*/ || pressC || pressD;  // PressB is turn off.
 #else 
+  // Only 1 button on testbed.
   pressAny = pressA;
+
 #endif
 
     if (fountainOn == true && pressAny)
@@ -137,17 +146,16 @@ void loop()
       
       Dln("allowing button press");
     }
-#if defined(__AVR_ATmega2560__)
 
     // BUTTON D: Lights on
     if (pressD)
     {
        Dln("Button D -Lights");
-       lightsOn = !lightsOn;
+       forceLightsOn = !forceLightsOn;
     }
     
     // BUTTON C : Color mode/set
-    if (pressC)
+    if (pressC && lightsOn)
     {     
       Dln("press c");
       if (++colormode > 2)
@@ -169,6 +177,24 @@ void loop()
       {
         Dln("Forth of July colors");
       }
+      
+      Dln("Prepare blink");
+      for (int blink = 0; blink <= colormode; ++blink)
+      {
+        D2("top loop. blink = ", blink);
+        Dln("Blink off");
+        rgb.off();
+        delay(1000);
+        Dln("Blink on");
+        rgb.setWhite(255);
+        rgb.setNow();
+        delay(1000); 
+        D2("End loop. blink = ", blink);
+      }
+      Dln("Done blinking");
+      rgb.off();
+      delay(1000); 
+
       colorChange.expire();
     }
 
@@ -179,8 +205,6 @@ void loop()
       fountainOn = false;
     }
 
-#endif
-
    if (autoOff.isNow())
    {
      D2("AutoOff Minutes expired: ", autoOff.getMinutes());
@@ -188,24 +212,23 @@ void loop()
    }
      
    int sensorValue = analogRead(lightSensorPin);
-   if (lightsOn || sensorValue < 300)
+   //D2("sensorValue=",sensorValue);
+   if (forceLightsOn || sensorValue < 300)
+   {
      lightsOn = true;
+     colorChange.expire();
+   }
+   else
+     lightsOn = false;
  
 #define NUM_PATTERNS 5
 
   if (pressA && fountainOn) 
   {
-    Dln("Press A"); 
-    fountain.off();
-    delay(500);
-    fountain.pump[5].setNow(255);
-    delay(500);
-    fountain.off();
-    Dln("Press A, pattern change");
-    D2("Old Pattern = ", pattern);
     if (mode == 0)
     {
-      mode = pattern = 1;
+      pattern = pattern == 1 ? 2 : 1;
+      mode = pattern;
       D2("mode and pattern = ", mode);
     }
     else if ((mode = ++pattern) > NUM_PATTERNS)
@@ -216,12 +239,19 @@ void loop()
     D2("New pattern = ",pattern);
     D2("current mode = ", mode);
     fountain.off();
-    fountain.pump[pattern].setNow(255);
+    if (mode == 0)
+        fountain.pump[5].setNow(255);
+     
+    else if (pattern < fountain.size())
+      fountain.pump[pattern - 1].setNow(255);
+      
     if (remote.pause(500))
        return;
     fountain.off();
-
     pattern_one_state = 10;
+    p5state = p5reset;
+    internalPatternChange.setSeconds(internalPatternChangeSeconds);
+    internalPatternChange.expire();
   }
   
   if (pressAny)
@@ -230,13 +260,11 @@ void loop()
     if (!fountainOn)
     {
       Dln("Fountain turning on");
-      internalPatternChange.expire();
       patternChange.expire();
       mode = 0;  // Random patterns
       autoOff.reset();
       colorChange.expire();
       internalPatternChange.setSeconds(internalPatternChangeSeconds);
-      internalPatternChange.expire();
     }
       
     fountainOn = true;
@@ -253,16 +281,19 @@ void loop()
   if (pattern == 0 || (mode == 0 && patternChange.isNow()))
   {
     D("Mode 0 and patternChange is now()");
-    pattern = random(1,NUM_PATTERNS + 1);
+    int oldpattern = pattern;
+    while (oldpattern == pattern)
+      pattern = random(1,NUM_PATTERNS + 1);
     D2("Random pattern = ",pattern);
-    internalPatternChange.expire();
     internalPatternChange.setSeconds(internalPatternChangeSeconds);
+    internalPatternChange.expire();
+    p5state = p5reset;
 
     if (pattern >= 4)
       fountain.off();
   }
      
-  if (colorChange.isNow())
+  if (colorChange.isNow() && lightsOn)
   {
     switch (colormode)
     {
@@ -312,45 +343,15 @@ void loop()
   
   if (internalPatternChange.isNow())
   {
-    if (pattern == 1) // left to right
+    if (pattern == 1) // all on at half, 3qtr or full;
     {
       Dln("Pattern 1");
+      int p1value = random(2,5) * 64;
+      if (p1value == 256) p1value = 255;
       for (int p = 0; p < fountain.size() - 1; ++p)
       {
-        fountain.pump[p].setNewValue(255);
+        fountain.pump[p].setNewValue(p1value);
       }
-
- /*
-      if (++pattern_one_state >= 10)
-      {
-        fountain.off();
-        pattern_one_state = 0;
-      }
-      
-      D2("Pattern state = ", pattern_one_state);
-      switch (pattern_one_state)
-      {
-          case 0:
-          case 1:
-          case 2:
-          case 3:
-          case 4:
-            fountain.pump[pattern_one_state].setNewValue(255);
-            fountain.pump[5].setNewValue(0);
-            break;
-
-          case 5:
-          case 6:
-          case 7:
-          case 8:
-            fountain.pump[pattern_one_state - 5].setNow(0);
-            break;
-          case 9:
-            fountain.pump[pattern_one_state - 5].setNewValue(0);
-            fountain.pump[5].setNewValue(255);
-            break;
-      }
-*/
     }
     
     else if (pattern == 2) // random on
@@ -358,12 +359,54 @@ void loop()
       internalPatternChange.setSeconds(3); 
       Dln("Pattern 2");
       int pumpnum = random(0,fountain.size());
-      int maxvalue = pumpnum == 5 ? 128 : 255;
+      D2("Turn on Pump#",pumpnum);
+      int maxvalue = pumpnum == 5 ? 200 : 255;
       
       fountain.off();
       fountain.pump[pumpnum].setNow(maxvalue);
     }
-    else if (pattern == 3)
+    else if (pattern == 3)  // rolling
+    {
+      internalPatternChange.setSeconds(1); 
+      Dln("Pattern 3");
+      p5previous = p5state;
+      ++p5state;
+      if (p5state > 11)
+        p5state = 0;
+      D4("p5state=",p5state," p5previous=",p5previous);
+      if (p5state == 0)
+         fountain.off();
+      if (p5state <= 4)
+      {
+        fountain.pump[p5state].setNow(255);
+        if (p5previous < 4)
+          fountain.pump[p5previous].setNow(0);
+      }
+      else if (p5state <= 8)
+      {
+        fountain.pump[8-p5state].setNow(255);
+        fountain.pump[8-p5previous].setNow(0);
+      }
+      else if (p5state == 9)
+      {
+        fountain.pump[0].setNow(0);
+        fountain.pump[5].setNow(255);
+      }
+      else if (p5state == 10)
+      {
+        fountain.pump[2].setNow(255);
+        fountain.pump[5].setNow(0);
+      }
+      else
+      {
+        fountain.off();
+        if (random(0,3) == 0)
+          patternChange.expire();
+      }
+      
+    }
+    /*
+    else if (pattern == 6)
     {  
       Dln("Pattern 3");
       int pumpval;
@@ -375,12 +418,14 @@ void loop()
         fountain.pump[p].setNewValue(pumpval);
       }
     }
+    */
+
     else if (pattern == 4)
     {  
       internalPatternChange.setSeconds(3);
       Dln("Pattern 4");
       int pumpval;
-      int pumpon = random(0,fountain.size());  // Skip a couple turns.
+      int pumpon = random(0,fountain.size());
       for (int p = 0; p < fountain.size(); ++p)
       {
         D("Pump "); D(p);
@@ -401,34 +446,36 @@ void loop()
         {
             // shift to front
             case 5:
-              fountain.pump[p].setNewValue(fountain.pump[p-1].getValue());
-              D2(p == 5 ? "F=":"R=",fountain.pump[p].getNewValue());
+              fountain.pump[p].setNewValue(fountain.pump[p-1].getRawValue());
+              D4("F=",p,"=",fountain.pump[p].getRawValue());
               //D2("F(currentvalue)=",fountain.pump[p].getValue());
               break;
 
             case 4:
             case 3:
-              fountain.pump[p].setNow(fountain.pump[p-1].getValue());
-              D2(p == 5 ? "F=":"R=",fountain.pump[p].getNewValue());
+              fountain.pump[p].setNow(fountain.pump[p-1].getRawValue());
+              D4("R",p,"=",fountain.pump[p].getRawValue());
               break;
 
             case 2:  // center;
             
               int value;
               do {
-                value = random(0,8) * 32;
+                value = random(0,8) * 32 - 1;
+                if (value < 0)
+                  value = 0;
               }
               while
-                (value == 0 && fountain.pump[1].getNewValue() == 0);
-              fountain.pump[p].setNewValue(value - 1);
-              D2("Center=",fountain.pump[p].getNewValue());
+                (value == 0 && fountain.pump[1].getRawValue() == 0);
+              fountain.pump[p].setNewValue(value);
+              D4("C",p,"=",fountain.pump[p].getRawValue());
               break;
   
             // mirror
             case 1:
             case 0:
-              fountain.pump[p].setNow(fountain.pump[4 - p].getNewValue());
-              D2("Left=",fountain.pump[p].getNewValue());
+              fountain.pump[p].setNow(fountain.pump[4 - p].getRawValue());
+              D4("L",p,"=",fountain.pump[p].getRawValue());
               break;
         }
       }
@@ -440,7 +487,7 @@ void loop()
   else
     rgb.off();
   fountain.update();
-  Dln(fountain.displayValue());
+  //Dln(fountain.displayValue());
 }
 
 boolean pause(unsigned mills)
