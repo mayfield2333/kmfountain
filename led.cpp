@@ -9,9 +9,13 @@ int color() {
 }
 
 int tint() {
-  if (random(0,4) != 0)
+  if (random(0,4) != 0) {
+    Dln("Tint() return 0");
     return 0;
-  return random(0,30);
+  }
+  int ret = random(4,11)*5;
+  D2("Tint return ", ret);
+  return ret;
 }
 
 void Led::setNewValue(int value)
@@ -105,13 +109,25 @@ void RGBLed::randomColor()
     int secondary = random(0,2) == 0 ? -1 : random(0,3);  // Use primary only half the time.
     
     int r;
+    int totalbrightness;
+
+    do {
+    totalbrightness = 0;
     setRed(r = ( (primary == 0 || secondary == 0) ? color() : tint()) );
+    totalbrightness += r;
     D2("Red=",r);
+    
     setGreen(r = ( (primary == 1 || secondary == 1) ? color() : tint()) );
+    totalbrightness += r;
     D2("Green=", r);
+
     setBlue(r = ( (primary == 2 || secondary == 2) ? color() : tint()) );
+    totalbrightness += r;
     D2("Blue=",r);
     D("\n");
+    }
+    while (totalbrightness < 128);
+    
     int speed;
     //setFadeSpeed(speed = random(4,10)* 1000);
     //D2("Speed=",speed);
@@ -144,6 +160,11 @@ void RGBLed::setRGB(int red, int green, int blue)
   setRed(red);
   setGreen(green);
   setBlue(blue);
+  Dln("setRGB");
+  D2("red = ", _rLed.getValue());
+  D2("green=", _gLed.getValue());
+  D2("blue= ", _bLed.getValue());
+  Dln();
 }
 
 void RGBLed::setWhite(int val) {
@@ -162,15 +183,37 @@ void RGBLed::setNow() {
   _rLed.setNow();
   _gLed.setNow();
   _bLed.setNow();
+  Dln("LED setnow");
 }
 
 void RGBLed::update() {
   _rLed.update();
   _gLed.update();
   _bLed.update();
+  D2("red = ", _rLed.getValue());
+  D2("green=", _gLed.getValue());
+  D2("blue= ", _bLed.getValue());
+#if false
+  if (_rLed.getNewValue() + _gLed.getNewValue() + _bLed.getNewValue() < 128) {
+     Dln("---------DIM DIM DIM-------------------");
+     if (Serial.available() > 0) {
+      int inbyte = Serial.read();
+      while (Serial.available() == 0);
+      inbyte = Serial.read();
+
+      while (_rLed.getNewValue() + _gLed.getNewValue() + _bLed.getNewValue() < 128) {
+        _rLed.setNewValue(_rLed.getNewValue() * 2);
+        _gLed.setNewValue(_gLed.getNewValue() * 2);
+        _bLed.setNewValue(_bLed.getNewValue() * 2);
+      }
+     }
+  }
+#endif
+  Dln();
 }
 
 void RGBLed::off() {
   allOff();
+  Dln("allOff");
 }
 
