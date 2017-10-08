@@ -4,7 +4,7 @@
 #include "Arduino.h"
 
 int color() {
-    int r = random(0,3) != 0 ? 255 : random(150,200);
+    int r = random(0,5) == 0 ? 255 : random(127,200);
     return r;
 }
 
@@ -13,7 +13,7 @@ int tint() {
     Dln("Tint() return 0");
     return 0;
   }
-  int ret = random(4,11)*5;
+  int ret = random(5,15)*5;
   D2("Tint return ", ret);
   return ret;
 }
@@ -125,8 +125,14 @@ void RGBLed::randomColor()
     totalbrightness += r;
     D2("Blue=",r);
     D("\n");
+#if debug
+    if (totalbrightness < 160) {
+      Dln("=======================================================");
+      D2("Oops too dim? totalbrightness =", totalbrightness);
     }
-    while (totalbrightness < 128);
+#endif
+    }
+    while (totalbrightness < 160);
     
     int speed;
     //setFadeSpeed(speed = random(4,10)* 1000);
@@ -190,10 +196,10 @@ void RGBLed::update() {
   _rLed.update();
   _gLed.update();
   _bLed.update();
-  D2("red = ", _rLed.getValue());
-  D2("green=", _gLed.getValue());
-  D2("blue= ", _bLed.getValue());
-#if false
+//  D2("red = ", _rLed.getValue());
+//  D2("green=", _gLed.getValue());
+//  D2("blue= ", _bLed.getValue());
+#if true
   if (_rLed.getNewValue() + _gLed.getNewValue() + _bLed.getNewValue() < 128) {
      Dln("---------DIM DIM DIM-------------------");
      if (Serial.available() > 0) {
@@ -209,7 +215,7 @@ void RGBLed::update() {
      }
   }
 #endif
-  Dln();
+//  Dln();
 }
 
 void RGBLed::off() {

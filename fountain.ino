@@ -1,5 +1,5 @@
 #include "Arduino.h"
-#define debug true
+#define debug false
 #include "debug.h"
 #include "remote.h"
 #include "led.h"
@@ -36,7 +36,7 @@ static const int lightSensorValue = 0;  // variable to store the value coming fr
 
 //#if defined(__AVR_ATmega2560__)
 #if !defined(TESTING)
-static const int patternChangeSeconds = 120;
+static const int patternChangeSeconds = 45;
 static const int colorChangeSeconds = 10;
 static const int internalPatternChangeSeconds = 3;
 static const int pumpfade = 4;
@@ -48,10 +48,10 @@ boolean forceLightsOn = false;
 
 #else
 static const int patternChangeSeconds = 35;
-static const int colorChangeSeconds = 15;
+static const int colorChangeSeconds = 3;
 static const int internalPatternChangeSeconds = 3;
 static const int pumpfade = 5;
-static const int lightfade = 5;
+static const int lightfade = 1;
 static const long autoOffMinutes = 5;
 static const int pumpmin = 0;
 static const bool enablepumps = false;
@@ -63,9 +63,9 @@ int mode = 0;
 int colormode = 0;
 int pattern = 0;
 int pattern_one_state = 0;
-const int p5reset = 11;
-int p5state = 0;
-int p5previous = 0;
+const int popcorn_reset = 11;
+int popcorn_state = 0;
+int popcorn_previous = 0;
 
 boolean fountainOn = true;  //Always on
 boolean lightsOn = false;
@@ -89,14 +89,15 @@ Timer autoOff;
 Timer buttonTimer;
 
 enum pump_patterns {
-  RANDOM_PATTERN = 0,
-  FULL_OR_3QTR = 1,
-  RANDOM_PAIR = 2,
-  POPCORN = 3, 
-  DECAY = 4,
+  RANDOM_PAIR,
+  POPCORN, 
+  DECAY,
   SYMETRICAL, 
-  // LAST PATTERN
-  NUM_PATTERNS
+  /* Last Pattern.  Enum would be number of patterns */
+  NUM_PATTERNS,
+
+  /* Disabled */
+    FULL_OR_3QTR
 };
 
 void setup() {
@@ -137,7 +138,7 @@ int speed = 1000;
 void loop()
 {
 
-#if defined(TESTING)
+#if defined(TESTING2)
     fountain.off();
     rgb.setWhite(255);
     rgb.setNow();
@@ -148,6 +149,23 @@ void loop()
     return;
 #endif
 
+   /* Watch Dog */
+   boolean oops = true;
+   for (int pumpnum = 0; pumpnum < fountain.size(); ++pumpnum)
+      if (fountain.pump[pumpnum].getNewValue() > 0) {
+         oops = false;
+         break;
+      }
+
+   if (oops) {
+      D2("OOPS\npattern = ",pattern);
+      internalPatternChange.setSeconds(internalPatternChangeSeconds);
+      internalPatternChange.expire();
+      patternChange.expire();
+      fountain.pump[fountain.size()-1].setNow(255);
+   }
+
+   
    if (autoOff.isNow())
    {
      D2("AutoOff Minutes expired: ", autoOff.getMinutes());
@@ -164,16 +182,17 @@ void loop()
      lightsOn = true;
    }
  
-  if (pattern == RANDOM_PATTERN || (mode == 0 && patternChange.isNow()))
+  if (mode == 0 && patternChange.isNow())
   {
     Dln("Mode 0 and patternChange is now()");
+    D2("Time = ", millis());
     int oldpattern = pattern;
     while (oldpattern == pattern)
-      pattern = random(1,NUM_PATTERNS);
+      pattern = random(0,NUM_PATTERNS);
     D2("Random pattern = ",pattern);
     internalPatternChange.setSeconds(internalPatternChangeSeconds);
     internalPatternChange.expire();
-    p5state = p5reset;
+    popcorn_state = popcorn_reset;
   }
      
   if (colorChange.isNow() && lightsOn)
@@ -187,7 +206,7 @@ void loop()
     if (pattern == FULL_OR_3QTR) // all on at half, 3qtr or full;
     {
       Dln("Pattern 1 - FULL_OR_3QTR");
-      int p1value = random(3,5) * 64 - 1;
+      int p1value = random(7,9) * 32 - 1;
       if (p1value >= 256) p1value = 255;
       for (int p = 0; p < fountain.size() - 1; ++p)
       {
@@ -206,14 +225,14 @@ void loop()
       do {
         pumpnum = random(0,max_random_pump);
       }
-      while (fountain.pump[pumpnum].getNewValue() != 0);
+      while (fountain.pump[pumpnum].getNewValue() != 0 && !internalPatternChange.isNow());
 
       // Pick another off pump
       int pumpnum2;
       do {
         pumpnum2 = random(0,max_random_pump);
       }
-      while (pumpnum == pumpnum2 || fountain.pump[pumpnum2].getNewValue() != 0);
+      while (pumpnum == pumpnum2 || (fountain.pump[pumpnum2].getNewValue() != 0  && !internalPatternChange.isNow()));
         
       int maxvalue = 255;
       
@@ -228,30 +247,30 @@ void loop()
     {
       internalPatternChange.setSeconds(1); 
       Dln("Pattern 3 POPCORN");
-      p5previous = p5state;
-      ++p5state;
-      if (p5state > 11)
-        p5state = 0;
-      D4("p5state=",p5state," p5previous=",p5previous);
-      if (p5state == 0)
+      popcorn_previous = popcorn_state;
+      ++popcorn_state;
+      if (popcorn_state > 11)
+        popcorn_state = 0;
+      D4("popcorn_state=",popcorn_state," popcorn_previous=",popcorn_previous);
+      if (popcorn_state == 0)
          fountain.off();
-      if (p5state <= 4)
+      if (popcorn_state <= 4)
       {
-        fountain.pump[p5state].setNow(255);
-        if (p5previous < 4)
-          fountain.pump[p5previous].setNow(0);
+        fountain.pump[popcorn_state].setNow(255);
+        if (popcorn_previous < 4)
+          fountain.pump[popcorn_previous].setNow(0);
       }
-      else if (p5state <= 8)
+      else if (popcorn_state <= 8)
       {
-        fountain.pump[8-p5state].setNow(255);
-        fountain.pump[8-p5previous].setNow(0);
+        fountain.pump[8-popcorn_state].setNow(255);
+        fountain.pump[8-popcorn_previous].setNow(0);
       }
-      else if (p5state == 9)
+      else if (popcorn_state == 9)
       {
         fountain.pump[0].setNow(0);
         fountain.pump[5].setNow(255);
       }
-      else if (p5state == 10)
+      else if (popcorn_state == 10)
       {
         fountain.pump[2].setNow(255);
         fountain.pump[5].setNow(0);
@@ -262,15 +281,20 @@ void loop()
         if (random(0,3) == 0)
           patternChange.expire();
       }
-      
     }
 
     else if (pattern == DECAY)
     {  
       internalPatternChange.setSeconds(3);
       Dln("Pattern 4 DECAY");
-      int pumpval;
-      int pumpon = random(0,fountain.size());
+      
+      int pumpon;
+      do {
+        pumpon = random(0,fountain.size());
+      }
+      // Possible no pumps are set to off, so only wait for internal pattern change.
+      while (fountain.pump[pumpon].getNewValue() != 0 && !internalPatternChange.isNow());
+      
       for (int p = 0; p < fountain.size(); ++p)
       {
         D("Pump "); D(p);
@@ -285,6 +309,7 @@ void loop()
     else if (pattern == SYMETRICAL) // Symetrical
     {
       Dln("Pattern 5 SYMETRICAL");
+      int totalOn = 0;
       for (int p = 5; p >= 0; --p)
       {
         switch (p)
@@ -306,12 +331,12 @@ void loop()
             
               int value;
               do {
-                value = random(0,8) * 32 - 1;
-                if (value < 0)
+                value = random(0,5) * 64 - 1;
+                if (value < 128)
                   value = 0;
               }
               while
-                (value == 0 && fountain.pump[1].getRawValue() == 0);
+                (value == 0 && fountain.pump[1].getNewValue() == 0);
               fountain.pump[p].setNewValue(value);
               //D4("C",p,"=",fountain.pump[p].getRawValue());
               break;
@@ -323,7 +348,21 @@ void loop()
               //D4("L",p,"=",fountain.pump[p].getRawValue());
               break;
         }
+
+        if (fountain.pump[p].getNewValue() != 0)
+          ++totalOn;
       }
+
+      // Make sure more than 1 pump is on;
+      if (totalOn <=2) {
+        Dln("SYMETRIC Forcing on extra pumps");
+        fountain.pump[0].setNewValue(128);
+        fountain.pump[4].setNewValue(128);
+      }
+    }
+    else
+    {
+      patternChange.expire();
     }
   } 
     
