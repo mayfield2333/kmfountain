@@ -4,7 +4,7 @@
 #include "Arduino.h"
 
 int color() {
-    int r = random(0,5) == 0 ? 255 : random(127,200);
+    int r = random(0,5) == 0 ? 255 : random(159,220);
     return r;
 }
 
@@ -111,7 +111,6 @@ void RGBLed::randomColor()
     int r;
     int totalbrightness;
 
-    do {
     totalbrightness = 0;
     setRed(r = ( (primary == 0 || secondary == 0) ? color() : tint()) );
     totalbrightness += r;
@@ -125,14 +124,26 @@ void RGBLed::randomColor()
     totalbrightness += r;
     D2("Blue=",r);
     D("\n");
+
+
+    if (totalbrightness < 200) {
 #if debug
-    if (totalbrightness < 160) {
       Dln("=======================================================");
       D2("Oops too dim? totalbrightness =", totalbrightness);
-    }
 #endif
+
+      switch(primary) {
+        case 0:
+           setRed(200);
+           break;
+        case 1:
+           setGreen(200);
+           break;
+        case 2:
+           setBlue(200);
+           break;
+      }
     }
-    while (totalbrightness < 160);
     
     int speed;
     //setFadeSpeed(speed = random(4,10)* 1000);

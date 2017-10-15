@@ -9,10 +9,13 @@ class Pwm {
     int _currentValue;
     int _value;
     int _newValue;
+    unsigned int _defaultFadeSpeed;
     unsigned int _fadeSpeed;  // In milliseconds.
     int _min;
     unsigned long _startTime;  // time new value was set.
     int _rawValue;            // raw new value;
+
+    unsigned int _minFadeSpeed;
     
 
   public:
@@ -35,5 +38,8 @@ class Pwm {
     void test();
     void writePin(int value);
     void setMin(int min);
+
+ protected:
+    virtual void _writePin(int value);
 };
 #endif

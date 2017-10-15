@@ -37,8 +37,8 @@ static const int lightSensorValue = 0;  // variable to store the value coming fr
 //#if defined(__AVR_ATmega2560__)
 #if !defined(TESTING)
 static const int patternChangeSeconds = 45;
-static const int colorChangeSeconds = 10;
-static const int internalPatternChangeSeconds = 3;
+static const int colorChangeSeconds = 15;
+static const int internalPatternChangeSeconds = 5;
 static const int pumpfade = 4;
 static const int lightfade = 3;
 static const long autoOffMinutes = 120;
@@ -47,7 +47,7 @@ static const bool enablepumps = true;
 boolean forceLightsOn = false;
 
 #else
-static const int patternChangeSeconds = 35;
+static const int patternChangeSeconds = 20;
 static const int colorChangeSeconds = 3;
 static const int internalPatternChangeSeconds = 3;
 static const int pumpfade = 5;
@@ -151,11 +151,17 @@ void loop()
 
    /* Watch Dog */
    boolean oops = true;
-   for (int pumpnum = 0; pumpnum < fountain.size(); ++pumpnum)
+   fountain.displayValue();
+
+   for (int pumpnum = 0; pumpnum < fountain.size(); ++pumpnum) {
+      D4("OOps check Pump ", pumpnum, " value=", fountain.pump[pumpnum].getNewValue());
+
       if (fountain.pump[pumpnum].getNewValue() > 0) {
+         Dln("\nOoops check cleared");
          oops = false;
          break;
       }
+   }
 
    if (oops) {
       D2("OOPS\npattern = ",pattern);

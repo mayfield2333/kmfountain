@@ -10,6 +10,8 @@ Pwm::Pwm(int pin){
 void Pwm::init(int pin) {
   _pin = pin;
   _min = _rawValue = _currentValue = _value = _newValue = _fadeSpeed = 0;
+  _defaultFadeSpeed = 0;
+  _minFadeSpeed = 0;
   pinMode(pin, OUTPUT); 
   setNow(0);
 }
@@ -23,7 +25,7 @@ void Pwm::setMin(int min)
 void Pwm::update() {
   int newval = _newValue;
   // Need to fade?
-   if (_value != _newValue)
+   if (_currentValue != _newValue)
    {
      // Compute elapsed time
      unsigned long current = millis();
@@ -36,6 +38,7 @@ void Pwm::update() {
      if (current < _startTime || elapsed > _fadeSpeed) {
        _startTime = current;
        _value = _newValue;
+       _fadeSpeed = _defaultFadeSpeed;
         D("Pin ");D(_pin);D2(" elapsed time\n_value=",_value);
      }
      else {
@@ -44,6 +47,14 @@ void Pwm::update() {
        D("Pin ");D(_pin); D2(" percent = ",percent);
        D("Pin ");D(_pin); D2(" value=",_value);
        // compute porpotional adjustment to value;
+
+       // Increasing pwm very fast?  Use Exponential instead of linear percentage
+       if (percent != 0 &&  _newValue > _value && _fadeSpeed <= _minFadeSpeed) {
+            percent = (100 + percent) * percent / 300L + 2;
+            if (percent > 100)
+               percent = 100;
+            D2(" New Percent = ",percent);
+       }
 
        newval = _value + (_newValue - _value) * percent / 100;
        if (newval > 255)
@@ -63,7 +74,7 @@ void Pwm::update() {
 void Pwm::writePin(int newval)
 {
   if (newval  // on
-      && _min > newval)  // new value is less than min then off
+      && _min > newval && _min > _newValue)  // new value is less than min then off
   {
     D3("newval=",newval," is less than min.  forcing off");
     newval = 0;
@@ -71,7 +82,11 @@ void Pwm::writePin(int newval)
   }
 
   _currentValue = newval;
-    
+  _writePin(newval);
+}
+
+void Pwm::_writePin(int newval)
+{
 #if defined(__AVR_ATmega2560__)
   analogWrite(_pin, newval);
 #else
@@ -105,7 +120,7 @@ void Pwm::writePin(int newval)
 
 
 void Pwm::setFadeSpeed(unsigned int speed){
-  _fadeSpeed = speed * 1000U;
+  _defaultFadeSpeed = _fadeSpeed = speed * 1000U;
 }
 
 void Pwm::setNewValue(int value){
@@ -119,19 +134,14 @@ void Pwm::setNewValue(int value){
       value = _min -1;      // Set to allow fade speed.
     else if (value != 255) // Scale
       value = _min + value * (255L - _min + 1) / 256;
-      
-    if (rawvalue && _currentValue == 0)  // Turning On?
-      _currentValue = _min;           // Set to allow for fade speed.
+
+      // TEST  attempt to improve or eliminate light flashing.
+//    if (rawvalue && _currentValue == 0)  // Turning On?
+//      _currentValue = _min;           // Set to allow for fade speed.
       
     D4("Adjusting value ", rawvalue, " to ", value);
   }
 
-  if (value == _newValue)
-  {
-    Dln("No change in value");
-    return;
-  }
-  
   _newValue = value;
   _value = _currentValue;
   _startTime = millis();
@@ -155,7 +165,7 @@ void Pwm::off() {
 
 void Pwm::setNow(int val)
 {
-  _value = _currentValue = val; // Force no fade processing.
+  _fadeSpeed = _minFadeSpeed; // Force fast fade processing.
   setNewValue(val);
   update();
 }

@@ -7,6 +7,9 @@
 class Pump  : public Pwm { 
 public:  
    void init(int pin); 
+
+protected:
+  virtual void _writePin(int value);
 };
 
 #define NUM_FOUNTAIN_PUMPS 6

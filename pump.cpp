@@ -6,6 +6,19 @@
 void Pump::init(int pin) {
   Pwm::init(pin);
   _min = 128;
+  _minFadeSpeed = 500;
+}
+
+void Pump::_writePin(int newval) 
+{
+  D2("_writePin = ", newval);
+  if (newval == 0) {
+     newval = 2;  // Try to reduce blink.
+     D2("_writePin adjustvalue = ", newval);
+  }
+  
+  //_currentValue = newval;  // For some reason, this prevents newvalue from being set correctly?
+  analogWrite(_pin, newval);
 }
 
 void Fountain::init(int firstpin)
@@ -46,6 +59,7 @@ void Fountain::update() {
   {
    pump[pp].update();
   }
+  displayValue();
 }
 
 char Fountain::displayValue() 
@@ -57,6 +71,6 @@ char Fountain::displayValue()
       D(pump[p].getValue());
    }
    Dln("");
-   delay(500);   
+   //delay(500);   
 }
 
