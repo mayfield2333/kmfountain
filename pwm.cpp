@@ -24,14 +24,15 @@ void Pwm::setMin(int min)
 // Update PWM pin based on current time and fadeSpeed.
 void Pwm::update() {
   int newval = _newValue;
+  unsigned long current = millis();
+  D("Pin ");D(_pin);D(" Times: "); D("_startTime=");D(_startTime);D(" current=");Dln(current);
+
+  long elapsed = (current - _startTime);
+
   // Need to fade?
    if (_currentValue != _newValue)
    {
      // Compute elapsed time
-     unsigned long current = millis();
-     D("Pin ");D(_pin);D(" Times: "); D("_startTime=");D(_startTime);D(" current=");Dln(current);
-
-     long elapsed = (current - _startTime);
      D("Pin ");D(_pin);D2(" elapsed time=",elapsed);
      D("Pin ");D(_pin);D2(" fade time=",_fadeSpeed);
      // Past fade speed? then done fading
@@ -47,7 +48,7 @@ void Pwm::update() {
        D("Pin ");D(_pin); D2(" percent = ",percent);
        D("Pin ");D(_pin); D2(" value=",_value);
        // compute porpotional adjustment to value;
-
+/*
        // Increasing pwm very fast?  Use Exponential instead of linear percentage
        if (percent != 0 &&  _newValue > _value && _fadeSpeed <= _minFadeSpeed) {
             percent = (100 + percent) * percent / 300L + 2;
@@ -55,14 +56,14 @@ void Pwm::update() {
                percent = 100;
             D2(" New Percent = ",percent);
        }
-
+*/
        newval = _value + (_newValue - _value) * percent / 100;
        if (newval > 255)
          newval = 255;
          
        if (newval < 0)
          newval = 0;
-         
+
        D("Pin ");D(_pin); D2(" newval=",newval);       
        Dln();
      }
@@ -74,7 +75,7 @@ void Pwm::update() {
 void Pwm::writePin(int newval)
 {
   if (newval  // on
-      && _min > newval && _min > _newValue)  // new value is less than min then off
+      && _min > newval)  // new value is less than min then off
   {
     D3("newval=",newval," is less than min.  forcing off");
     newval = 0;
@@ -130,7 +131,7 @@ void Pwm::setNewValue(int value){
   // Need to adjust for minimum value?
   if (_min != 0)
   {
-    if (value == 0 && _currentValue != 0)  // Turning off?
+    if (value == 0)  // Turning off?
       value = _min -1;      // Set to allow fade speed.
     else if (value != 255) // Scale
       value = _min + value * (255L - _min + 1) / 256;

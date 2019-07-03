@@ -1,5 +1,5 @@
 #include "Arduino.h"
-#define debug false
+#define debug true
 #include "debug.h"
 #include "remote.h"
 #include "led.h"
@@ -38,7 +38,7 @@ static const int lightSensorValue = 0;  // variable to store the value coming fr
 #if !defined(TESTING)
 static const int patternChangeSeconds = 45;
 static const int colorChangeSeconds = 15;
-static const int internalPatternChangeSeconds = 5;
+static const int internalPatternChangeSeconds = 20; //5;
 static const int pumpfade = 4;
 static const int lightfade = 3;
 static const long autoOffMinutes = 120;
@@ -93,6 +93,7 @@ enum pump_patterns {
   POPCORN, 
   DECAY,
   SYMETRICAL, 
+  ALL_ON,
   /* Last Pattern.  Enum would be number of patterns */
   NUM_PATTERNS,
 
@@ -103,6 +104,7 @@ enum pump_patterns {
 void setup() {
   // USB can be used for Debug output.
   Serial.begin(9600);
+  Serial.println("hello world");
   Dln("setup");
   D2("Remote pin = ", REMOTE_PIN);
   remote.init(REMOTE_PIN);
@@ -138,7 +140,7 @@ int speed = 1000;
 void loop()
 {
 
-#if defined(TESTING2)
+#if defined(TESTINGLIGHTS)
     fountain.off();
     rgb.setWhite(255);
     rgb.setNow();
@@ -150,14 +152,14 @@ void loop()
 #endif
 
    /* Watch Dog */
-   boolean oops = true;
-   fountain.displayValue();
+   boolean oops = !debug; //true;
+
 
    for (int pumpnum = 0; pumpnum < fountain.size(); ++pumpnum) {
-      D4("OOps check Pump ", pumpnum, " value=", fountain.pump[pumpnum].getNewValue());
+      // D4("OOps check Pump ", pumpnum, " value=", fountain.pump[pumpnum].getNewValue());
 
       if (fountain.pump[pumpnum].getNewValue() > 0) {
-         Dln("\nOoops check cleared");
+         //Dln("\nOoops check cleared");
          oops = false;
          break;
       }
@@ -190,6 +192,9 @@ void loop()
  
   if (mode == 0 && patternChange.isNow())
   {
+    if (debug)
+    fountain.displayValue();
+    
     Dln("Mode 0 and patternChange is now()");
     D2("Time = ", millis());
     int oldpattern = pattern;
@@ -206,10 +211,25 @@ void loop()
     rgb.randomColor();
     //changecolor(); // Supported buttons for different color modes.
   }
-  
+
+pattern = DECAY;
+#if defined(TESTING)
+  pattern = ALL_ON;
+#endif
+
   if (internalPatternChange.isNow())
   {
-    if (pattern == FULL_OR_3QTR) // all on at half, 3qtr or full;
+    if (pattern == ALL_ON)
+    {
+      Dln("ALL_ON");
+      for (int p = 0; p < fountain.size(); ++p)
+      {
+        D2("TURN ON PUMP ", p);
+        fountain.pump[p].setNow(255);
+      }
+      
+    }
+    else if (pattern == FULL_OR_3QTR) // all on at half, 3qtr or full;
     {
       Dln("Pattern 1 - FULL_OR_3QTR");
       int p1value = random(7,9) * 32 - 1;
@@ -297,16 +317,21 @@ void loop()
       int pumpon;
       do {
         pumpon = random(0,fountain.size());
+        D2("Picking pump # ", pumpon);
       }
       // Possible no pumps are set to off, so only wait for internal pattern change.
-      while (fountain.pump[pumpon].getNewValue() != 0 && !internalPatternChange.isNow());
+      while (fountain.pump[pumpon].getNewValue() == 255 && !internalPatternChange.isNow());
       
       for (int p = 0; p < fountain.size(); ++p)
       {
         D("Pump "); D(p);
-        D2(" value = ", fountain.pump[p].getValue());
-        if (p == pumpon)
+        D2(" getValue() = ", fountain.pump[p].getValue());
+        if (p == pumpon) {
+          D2("Set on pump#", pumpon);
           fountain.pump[p].setNow(255);
+          D2("Set curvalue = ", fountain.pump[p].getValue());
+          D2("Set newvalue = ", fountain.pump[p].getNewValue());
+        }
         else
           fountain.pump[p].setNewValue(0);      
       }
@@ -377,7 +402,7 @@ void loop()
   else
     rgb.off();
   fountain.update();
-  //Dln(fountain.displayValue());
+  //fountain.displayValue();
 }
 
 boolean pause(unsigned mills)

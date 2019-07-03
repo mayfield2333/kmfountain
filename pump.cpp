@@ -1,6 +1,6 @@
 
 #include "pump.h"
-#define debug false
+#define debug true
 #include "debug.h"
 
 void Pump::init(int pin) {
@@ -11,12 +11,14 @@ void Pump::init(int pin) {
 
 void Pump::_writePin(int newval) 
 {
+  /*
   D2("_writePin = ", newval);
   if (newval == 0) {
      newval = 2;  // Try to reduce blink.
      D2("_writePin adjustvalue = ", newval);
   }
-  
+
+  */
   //_currentValue = newval;  // For some reason, this prevents newvalue from being set correctly?
   analogWrite(_pin, newval);
 }
@@ -59,18 +61,29 @@ void Fountain::update() {
   {
    pump[pp].update();
   }
-  displayValue();
+  //displayValue();
 }
 
 char Fountain::displayValue() 
 {
-    D("Pumps[0-n] = ");
+    D("CurrValue Pumps[0-n] = ");
     for (int p = 0; p < size(); ++p)
     {
       D(" ");
       D(pump[p].getValue());
    }
    Dln("");
+   
    //delay(500);   
+   D("NewValue Pumps[0-n] = ");
+   for (int p = 0; p < size(); ++p)
+   {
+      D(" ");
+      D(pump[p].getNewValue());
+   }
+   Dln("");
+   Dln("");
+   //delay(500);   
+
 }
 
