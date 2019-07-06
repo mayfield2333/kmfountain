@@ -4,16 +4,16 @@
 #include "Arduino.h"
 
 int color() {
-    int r = random(0,5) == 0 ? 255 : random(127,200);
+    int r = random(0,5) < 3 ? 255 : random(200,240);
     return r;
 }
 
 int tint() {
-  if (random(0,4) != 0) {
+  if (random(0,5) != 0) {
     Dln("Tint() return 0");
     return 0;
   }
-  int ret = random(5,15)*5;
+  int ret = random(5,15)*10;
   D2("Tint return ", ret);
   return ret;
 }
@@ -113,15 +113,15 @@ void RGBLed::randomColor()
 
     do {
     totalbrightness = 0;
-    setRed(r = ( (primary == 0 || secondary == 0) ? color() : tint()) );
+    setRed(r = ( primary == 0 ? 255 : (secondary == 0 ? color() : tint() ) ) );
     totalbrightness += r;
     D2("Red=",r);
     
-    setGreen(r = ( (primary == 1 || secondary == 1) ? color() : tint()) );
+    setGreen(r = ( primary == 1 ? 255 : (secondary == 1 ? color() : tint() ) ) );
     totalbrightness += r;
     D2("Green=", r);
 
-    setBlue(r = ( (primary == 2 || secondary == 2) ? color() : tint()) );
+    setBlue(r = ( primary == 2 ? 255 : (secondary == 2 ? color() : tint() ) ) );
     totalbrightness += r;
     D2("Blue=",r);
     D("\n");
