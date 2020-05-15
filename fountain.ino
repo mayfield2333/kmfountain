@@ -40,7 +40,7 @@ static const int lightSensorValue = 0;  // variable to store the value coming fr
 
 //#if defined(__AVR_ATmega2560__)
 #if !defined(TESTING)
-static const int patternChangeSeconds = 45;
+static const int patternChangeSeconds = 20;
 static const int colorChangeSeconds = 10;
 static const int internalPatternChangeSeconds = 3;
 static const int pumpfade = 4;
@@ -66,8 +66,11 @@ boolean forceLightsOn = true;
 enum pump_patterns {
   POPCORN, 
   RANDOM_PAIR,
+  INSTANT_FULL_5,
   FULL_5,
+  INSTANT_FULL_6,
   FULL_6,
+  INSTANT_SIX_ONLY,
   SIX_ONLY,
   MOUNTAIN,
   VALLEY,
@@ -84,7 +87,7 @@ enum pump_patterns {
 // If not using randomPatterns, then use program list
 int programList[] = { POPCORN, POPCORN, POPCORN,
                       RANDOM_PAIR,
-                      FULL_5, FULL_6, SIX_ONLY, 
+                      INSTANT_FULL_5, INSTANT_FULL_6, INSTANT_SIX_ONLY, 
                       MOUNTAIN, VALLEY, FULL_5,
                       -1
                     };
@@ -209,7 +212,9 @@ void loop()
     }
     
     // Reset Common state  
+    fountain.setFadeSpeed(pumpfade);  // in Seconds.
     internalPatternChange.setSeconds(internalPatternChangeSeconds);
+    patternChange.setSeconds(patternChangeSeconds);
     internalPatternChange.expire();
     popcorn_state = popcorn_reset;
   }
@@ -414,42 +419,69 @@ void loop()
       }
       break;
 
+    case INSTANT_FULL_5:
+      fountain.setFadeSpeed(0);  // in Seconds.
+      for (int p = 0; p <= 4; ++p)
+        fountain.pump[p].setNow(255);
+      fountain.pump[5].setNow(0);
+      patternChange.setSeconds(internalPatternChangeSeconds);
+      break;
+      
     case FULL_5:
       Dln("Pattern FULL_5");
       for (int p = 0; p <= 4; ++p)
         fountain.pump[p].setNewValue(255);
       fountain.pump[5].setNewValue(0);
+      patternChange.setSeconds(internalPatternChangeSeconds);
       break;
 
+    case INSTANT_FULL_6:
+      fountain.setFadeSpeed(0);  // in Seconds.
+      for (int p = 0; p <= 5; ++p)
+        fountain.pump[p].setNow(255);
+      patternChange.setSeconds(internalPatternChangeSeconds);
+      break;
+      
     case FULL_6:
       Dln("Pattern FULL_6");
       fountain.setNewValue(255);
+      patternChange.setSeconds(internalPatternChangeSeconds);
       break;
 
+    case INSTANT_SIX_ONLY:
+      fountain.setFadeSpeed(0);  // in Seconds.
+      fountain.off();
+      fountain.pump[5].setNow(255);
+      patternChange.setSeconds(internalPatternChangeSeconds);
+      break;
+      
     case SIX_ONLY:
       Dln("Pattern SIX_ONLY");
       fountain.setNewValue(0);
       fountain.pump[5].setNewValue(255);
+      patternChange.setSeconds(internalPatternChangeSeconds);
       break;
       
     case MOUNTAIN:
       Dln("Pattern MOUNTAIN");
       fountain.pump[0].setNewValue(128);
-      fountain.pump[1].setNewValue(192);
+      fountain.pump[1].setNewValue(172);
       fountain.pump[2].setNewValue(255);
-      fountain.pump[3].setNewValue(192);
+      fountain.pump[3].setNewValue(172);
       fountain.pump[4].setNewValue(128);
       fountain.pump[5].setNewValue(0);
+      patternChange.setSeconds(internalPatternChangeSeconds);
       break;
       
     case VALLEY:
       Dln("Pattern VALLEY");
       fountain.pump[0].setNewValue(255);
-      fountain.pump[1].setNewValue(192);
+      fountain.pump[1].setNewValue(172);
       fountain.pump[2].setNewValue(128);
-      fountain.pump[3].setNewValue(192);
+      fountain.pump[3].setNewValue(172);
       fountain.pump[4].setNewValue(255);
       fountain.pump[5].setNewValue(0);
+      patternChange.setSeconds(internalPatternChangeSeconds);
       break;
             
     default:  // programmimg error?
@@ -559,4 +591,5 @@ void changecolor() {
         break;
     }
 }
+
 
