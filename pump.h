@@ -23,6 +23,7 @@ public:
   void setFadeSpeed(int speed);
   int size() { return NUM_FOUNTAIN_PUMPS; };
   char displayValue();
+  void setNewValue(int val);
 };
   
 #endif

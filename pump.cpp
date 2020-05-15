@@ -16,6 +16,14 @@ void Fountain::init(int firstpin)
   }
 }
 
+void Fountain::setNewValue(int val)
+{
+  for (int pp = 0; pp < size(); ++pp)
+  {
+   pump[pp].setNewValue(val);
+  }
+}
+
 void Fountain::setFadeSpeed(int speed)
 {
   for (int pp = 0; pp < size(); ++pp)

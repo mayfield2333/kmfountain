@@ -6,10 +6,11 @@
 #include "pump.h"
 #include "timer.h"
 
-//#define TESTING
+#define TESTING
+
 
 #define USE_RANDOM_PATTERNS false
-static const boolean useRandomColors = true;
+static const boolean useRandomColors = false;
 
 /*
   Pin Assignments
@@ -62,9 +63,35 @@ boolean forceLightsOn = true;
 
 #endif
 
+enum pump_patterns {
+  POPCORN, 
+  RANDOM_PAIR,
+  FULL_5,
+  FULL_6,
+  SIX_ONLY,
+  MOUNTAIN,
+  VALLEY,
+
+  /* Last Pattern.  Enum would be number of patterns */
+  NUM_PATTERNS,
+  
+  /* Disabled */
+  DECAY,
+  SYMETRICAL, 
+  FULL_OR_3QTR
+};
+
+// If not using randomPatterns, then use program list
+int programList[] = { POPCORN, POPCORN, POPCORN,
+                      RANDOM_PAIR,
+                      FULL_5, FULL_6, SIX_ONLY, 
+                      MOUNTAIN, VALLEY, FULL_5,
+                      -1
+                    };
 int mode = 0;
 int colormode = 0;
-int pattern = 0;
+int pattern = NUM_PATTERNS; // force change
+int programIndex = 1000;    // force Change
 int pattern_one_state = 0;
 const int popcorn_reset = 11;
 int popcorn_state = 0;
@@ -91,31 +118,6 @@ Timer internalPatternChange;
 Timer autoOff;
 Timer buttonTimer;
 
-enum pump_patterns {
-  POPCORN, 
-  RANDOM_PAIR,
-  FULL_5,
-  FULL_6,
-  SIX_ONLY,
-  MOUNTAIN,
-  VALLEY,
-
-#if !USE_RANDOM_PATTERNS
-
-  FULL_5_AGAIN,  // Hack for sequential processing
-
-#endif
-
-  /* Last Pattern.  Enum would be number of patterns */
-  NUM_PATTERNS,
-  
-
-  /* Disabled */
-  DECAY,
-  SYMETRICAL, 
-  FULL_OR_3QTR
-};
-
 void setup() {
   // USB can be used for Debug output.
   Serial.begin(9600);
@@ -139,6 +141,8 @@ void setup() {
   patternChange.setSeconds(patternChangeSeconds);
   
   internalPatternChange.setSeconds(internalPatternChangeSeconds);
+  internalPatternChange.expire();
+  patternChange.expire();
   randomSeed(analogRead(A0));
   
   autoOff.setMinutes(autoOffMinutes);
@@ -165,23 +169,7 @@ void loop()
     return;
 #endif
 
-   /* Watch Dog */
-   boolean oops = true;
-   for (int pumpnum = 0; pumpnum < fountain.size(); ++pumpnum)
-      if (fountain.pump[pumpnum].getNewValue() > 0) {
-         oops = false;
-         break;
-      }
-
-   if (oops) {
-      D2("OOPS\npattern = ",pattern);
-      internalPatternChange.setSeconds(internalPatternChangeSeconds);
-      internalPatternChange.expire();
-      patternChange.expire();
-      fountain.pump[fountain.size()-1].setNow(255);
-   }
-
-   
+  
    if (autoOff.isNow())
    {
      D2("AutoOff Minutes expired: ", autoOff.getMinutes());
@@ -197,20 +185,27 @@ void loop()
         colorChange.expire();
      lightsOn = true;
    }
- 
+
+  int oldpattern = pattern;
+  
   if (mode == 0 && patternChange.isNow())
   {
+    Dln("-----------------");
     if (USE_RANDOM_PATTERNS) {
       Dln("Mode 0 and patternChange is now()");
       D2("Time = ", millis());
-      int oldpattern = pattern;
       while (oldpattern == pattern)
         pattern = random(0,NUM_PATTERNS);
       D2("Random pattern = ",pattern);
     }
     else {
-      if (++pattern > NUM_PATTERNS)
-        pattern = 0;
+      if (++programIndex >= sizeof(programList)/sizeof(int) || programList[programIndex] == -1)
+        programIndex = 0;
+      pattern = programList[programIndex];
+      D2("programIndex = ", programIndex);
+      D2("Pattern = ", pattern);
+      //if (pattern == RANDOM_PAIR)
+      //  Serial.println("changed to random pairs");
     }
     
     // Reset Common state  
@@ -221,10 +216,16 @@ void loop()
      
   if (colorChange.isNow() && lightsOn)
   {
-    if (useRandomColors)
+    if (useRandomColors){
+      Dln("Choose Random color");
       rgb.randomColor();
+    }
     else {
+      Dln("Choose from ColorWheel");
       rgb.colorWheel();
+      D2("red = ", rgb._rLed.getNewValue());
+      D2("green = ", rgb._gLed.getNewValue());
+      D2("blue = ", rgb._bLed.getNewValue());
     }
     //changecolor(); // Supported buttons for different color modes.
   }
@@ -235,7 +236,7 @@ void loop()
       case FULL_OR_3QTR:
         {
           // all on at half, 3qtr or full;
-          Dln("Pattern 1 - FULL_OR_3QTR");
+          Dln("Pattern - FULL_OR_3QTR");
           int p1value = random(7,9) * 32 - 1;
           if (p1value >= 256) p1value = 255;
           for (int p = 0; p < fountain.size() - 1; ++p)
@@ -247,24 +248,33 @@ void loop()
 
       case RANDOM_PAIR:
         {
-          internalPatternChange.setSeconds(2); 
-          Dln("Pattern 2 RANDOM_PAIR");
-    
+          Dln("Pattern RANDOM_PAIR");
+
+          if (pattern != oldpattern) {
+            //Serial.println("RANDOM_PAIR: forcing fountain off");
+            fountain.setNewValue(0);
+          }
+            
           int max_random_pump = fountain.size() - 1;
           // Pick an off pump
           int pumpnum;
           do {
             pumpnum = random(0,max_random_pump);
+            //Serial.print("pumpnum=");Serial.print(pumpnum); Serial.print(" value = ");Serial.println(fountain.pump[pumpnum].getRawValue());
           }
-          while (fountain.pump[pumpnum].getNewValue() != 0 && !internalPatternChange.isNow());
-    
+          while (fountain.pump[pumpnum].getRawValue() != 0);
+          //Serial.print("RANDOM_PAIRS: off pumpnum = "); Serial.println(pumpnum);
+          
           // Pick another off pump
           int pumpnum2;
           do {
             pumpnum2 = random(0,max_random_pump);
+            //Serial.print("pumpnum2=");Serial.print(pumpnum2); Serial.print(" value = ");Serial.println(fountain.pump[pumpnum2].getRawValue());
           }
-          while (pumpnum == pumpnum2 || (fountain.pump[pumpnum2].getNewValue() != 0  && !internalPatternChange.isNow()));
-            
+          while (pumpnum == pumpnum2 || (fountain.pump[pumpnum2].getRawValue() != 0 ));
+          //Serial.print("RANDOM_PAIRS: off pumpnum2 = "); Serial.println(pumpnum2);
+          internalPatternChange.setSeconds(2); 
+          
           int maxvalue = 255;
           
           fountain.off();
@@ -277,6 +287,7 @@ void loop()
 
       case POPCORN:
         // rolling
+        Dln("Pattern POPCORN");
 
         internalPatternChange.setSeconds(1); 
         Dln("Pattern 3 POPCORN");
@@ -317,7 +328,7 @@ void loop()
 
           case 11:  // random repeat?
             fountain.off();
-            if (random(0,3) == 0)
+            if (random(0,3) == 0 || !USE_RANDOM_PATTERNS)
               patternChange.expire();
             break;
         }
@@ -325,9 +336,8 @@ void loop()
 
       case DECAY:
         {
-          internalPatternChange.setSeconds(3);
-          Dln("Pattern 4 DECAY");
-          
+          Dln("Pattern DECAY");
+          internalPatternChange.setSeconds(3);          
           int pumpon;
           do {
             pumpon = random(0,fountain.size());
@@ -350,7 +360,7 @@ void loop()
 
       case SYMETRICAL: // Symetrical
         {
-          Dln("Pattern 5 SYMETRICAL");
+          Dln("Pattern SYMETRICAL");
           int totalOn = 0;
           for (int p = 5; p >= 0; --p)
           {
@@ -404,24 +414,26 @@ void loop()
       }
       break;
 
-  
     case FULL_5:
-      for (int p = 0; p < 5; ++p)
+      Dln("Pattern FULL_5");
+      for (int p = 0; p <= 4; ++p)
         fountain.pump[p].setNewValue(255);
       fountain.pump[5].setNewValue(0);
       break;
 
     case FULL_6:
-      for (int p = 0; p < 6; ++p)
-        fountain.pump[p].setNewValue(255);
+      Dln("Pattern FULL_6");
+      fountain.setNewValue(255);
       break;
 
     case SIX_ONLY:
-      fountain.off();
+      Dln("Pattern SIX_ONLY");
+      fountain.setNewValue(0);
       fountain.pump[5].setNewValue(255);
       break;
       
     case MOUNTAIN:
+      Dln("Pattern MOUNTAIN");
       fountain.pump[0].setNewValue(128);
       fountain.pump[1].setNewValue(192);
       fountain.pump[2].setNewValue(255);
@@ -431,6 +443,7 @@ void loop()
       break;
       
     case VALLEY:
+      Dln("Pattern VALLEY");
       fountain.pump[0].setNewValue(255);
       fountain.pump[1].setNewValue(192);
       fountain.pump[2].setNewValue(128);
@@ -438,18 +451,37 @@ void loop()
       fountain.pump[4].setNewValue(255);
       fountain.pump[5].setNewValue(0);
       break;
-      
-      
+            
     default:  // programmimg error?
+      Dln("Pattern 'default', time to change patterns");
       patternChange.expire();
       break;
     }
   } 
-    
+
+   /* Watch Dog */
+#ifdef TESTING3
+   boolean oops = true;
+   for (int pumpnum = 0; pumpnum < fountain.size(); ++pumpnum)
+      if (fountain.pump[pumpnum].getNewValue() > 0) {
+         oops = false;
+         break;
+      }
+
+   if (oops) {
+      D2("OOPS\npattern = ",pattern);
+      internalPatternChange.setSeconds(internalPatternChangeSeconds);
+      internalPatternChange.expire();
+      patternChange.expire();
+      fountain.pump[fountain.size()-1].setNow(255);
+   }
+#endif
+      
   if (lightsOn)
     rgb.update();
   else
     rgb.off();
+    
   fountain.update();
   //Dln(fountain.displayValue());
 }
@@ -469,6 +501,8 @@ void changecolor() {
         break;
       
       case 1: // Halloween;
+
+
 
         if (random(0,4) == 0)
         {

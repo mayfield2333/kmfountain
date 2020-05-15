@@ -105,9 +105,10 @@ void RGBLed::test(Remote *remote) {
 
 void RGBLed::colorWheel() {
   const int maxColorIndex = 5;
-  if (colorIndex++ > maxColorIndex)
+  if (++colorIndex > maxColorIndex)
     colorIndex = 0;
-
+  
+  //Serial.print("colorIndex = "); Serial.println(colorIndex);
   int primary = colorIndex / 2;
   int secondary = (primary + colorIndex % 2) % 3;
 
@@ -116,12 +117,9 @@ void RGBLed::colorWheel() {
   if (secondary != primary && secondary > 2)
     { Serial.print("**** ERROR ****: secondary == "); Serial.println(secondary);}
 
-  if (primary == 0 || secondary == 0)
-    setRed(255);
-  if (primary == 1 || secondary == 1)
-    setGreen(255);
-  if (primary == 2 || secondary == 2)
-    setBlue(255);
+  setRed((primary == 0 || secondary == 0) ? 255 : 0);
+  setGreen((primary == 1 || secondary == 1) ? 255 : 0);
+  setBlue((primary == 2 || secondary == 2) ? 255 : 0);
 }
 
 void RGBLed::randomColor()
