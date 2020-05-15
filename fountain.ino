@@ -404,6 +404,42 @@ void loop()
       }
       break;
 
+  
+    case FULL_5:
+      for (int p = 0; p < 5; ++p)
+        fountain.pump[p].setNewValue(255);
+      fountain.pump[5].setNewValue(0);
+      break;
+
+    case FULL_6:
+      for (int p = 0; p < 6; ++p)
+        fountain.pump[p].setNewValue(255);
+      break;
+
+    case SIX_ONLY:
+      fountain.off();
+      fountain.pump[5].setNewValue(255);
+      break;
+      
+    case MOUNTAIN:
+      fountain.pump[0].setNewValue(128);
+      fountain.pump[1].setNewValue(192);
+      fountain.pump[2].setNewValue(255);
+      fountain.pump[3].setNewValue(192);
+      fountain.pump[4].setNewValue(128);
+      fountain.pump[5].setNewValue(0);
+      break;
+      
+    case VALLEY:
+      fountain.pump[0].setNewValue(255);
+      fountain.pump[1].setNewValue(192);
+      fountain.pump[2].setNewValue(128);
+      fountain.pump[3].setNewValue(192);
+      fountain.pump[4].setNewValue(255);
+      fountain.pump[5].setNewValue(0);
+      break;
+      
+      
     default:  // programmimg error?
       patternChange.expire();
       break;
