@@ -30,6 +30,7 @@ class RGBLed {
     Led _rLed;
     Led _gLed;
     Led _bLed;
+    int colorIndex = 0;
         
     void init(int blue_pin, int green_pin, int red_pin);
     void setRed(int);
@@ -41,6 +42,7 @@ class RGBLed {
     void setWhite(int);
     void setFadeSpeed(int);
     void randomColor();
+    void colorWheel();
     void update();
     void setNow();
     void test(Remote *remote);

@@ -8,6 +8,9 @@
 
 //#define TESTING
 
+#define USE_RANDOM_PATTERNS false
+static const boolean useRandomColors = true;
+
 /*
   Pin Assignments
 */ 
@@ -89,15 +92,28 @@ Timer autoOff;
 Timer buttonTimer;
 
 enum pump_patterns {
-  RANDOM_PAIR,
   POPCORN, 
-  DECAY,
-  SYMETRICAL, 
+  RANDOM_PAIR,
+  FULL_5,
+  FULL_6,
+  SIX_ONLY,
+  MOUNTAIN,
+  VALLEY,
+
+#if !USE_RANDOM_PATTERNS
+
+  FULL_5_AGAIN,  // Hack for sequential processing
+
+#endif
+
   /* Last Pattern.  Enum would be number of patterns */
   NUM_PATTERNS,
+  
 
   /* Disabled */
-    FULL_OR_3QTR
+  DECAY,
+  SYMETRICAL, 
+  FULL_OR_3QTR
 };
 
 void setup() {
@@ -176,7 +192,7 @@ void loop()
    //D2("sensorValue=",sensorValue);
    if (forceLightsOn || sensorValue < 300)
    {
-  //   D4("Sensor=",sensorValue,"forceLightsOn=",forceLightsOn);
+    //   D4("Sensor=",sensorValue,"forceLightsOn=",forceLightsOn);
      if (lightsOn == false)
         colorChange.expire();
      lightsOn = true;
@@ -184,12 +200,20 @@ void loop()
  
   if (mode == 0 && patternChange.isNow())
   {
-    Dln("Mode 0 and patternChange is now()");
-    D2("Time = ", millis());
-    int oldpattern = pattern;
-    while (oldpattern == pattern)
-      pattern = random(0,NUM_PATTERNS);
-    D2("Random pattern = ",pattern);
+    if (USE_RANDOM_PATTERNS) {
+      Dln("Mode 0 and patternChange is now()");
+      D2("Time = ", millis());
+      int oldpattern = pattern;
+      while (oldpattern == pattern)
+        pattern = random(0,NUM_PATTERNS);
+      D2("Random pattern = ",pattern);
+    }
+    else {
+      if (++pattern > NUM_PATTERNS)
+        pattern = 0;
+    }
+    
+    // Reset Common state  
     internalPatternChange.setSeconds(internalPatternChangeSeconds);
     internalPatternChange.expire();
     popcorn_state = popcorn_reset;
@@ -197,172 +221,192 @@ void loop()
      
   if (colorChange.isNow() && lightsOn)
   {
-    rgb.randomColor();
+    if (useRandomColors)
+      rgb.randomColor();
+    else {
+      rgb.colorWheel();
+    }
     //changecolor(); // Supported buttons for different color modes.
   }
   
   if (internalPatternChange.isNow())
   {
-    if (pattern == FULL_OR_3QTR) // all on at half, 3qtr or full;
-    {
-      Dln("Pattern 1 - FULL_OR_3QTR");
-      int p1value = random(7,9) * 32 - 1;
-      if (p1value >= 256) p1value = 255;
-      for (int p = 0; p < fountain.size() - 1; ++p)
-      {
-        fountain.pump[p].setNewValue(p1value);
-      }
-    }
-    
-    else if (pattern == RANDOM_PAIR) // random on
-    {
-      internalPatternChange.setSeconds(2); 
-      Dln("Pattern 2 RANDOM_PAIR");
-
-      int max_random_pump = fountain.size() - 1;
-      // Pick an off pump
-      int pumpnum;
-      do {
-        pumpnum = random(0,max_random_pump);
-      }
-      while (fountain.pump[pumpnum].getNewValue() != 0 && !internalPatternChange.isNow());
-
-      // Pick another off pump
-      int pumpnum2;
-      do {
-        pumpnum2 = random(0,max_random_pump);
-      }
-      while (pumpnum == pumpnum2 || (fountain.pump[pumpnum2].getNewValue() != 0  && !internalPatternChange.isNow()));
-        
-      int maxvalue = 255;
-      
-      fountain.off();
-      fountain.pump[pumpnum].setNow(maxvalue);
-      D2("Turn on Pump#",pumpnum);
-      fountain.pump[pumpnum2].setNow(maxvalue);
-      D2("Turn on Pump#",pumpnum2);
-    }
-    
-    else if (pattern == POPCORN)  // rolling
-    {
-      internalPatternChange.setSeconds(1); 
-      Dln("Pattern 3 POPCORN");
-      popcorn_previous = popcorn_state;
-      ++popcorn_state;
-      if (popcorn_state > 11)
-        popcorn_state = 0;
-      D4("popcorn_state=",popcorn_state," popcorn_previous=",popcorn_previous);
-      if (popcorn_state == 0)
-         fountain.off();
-      if (popcorn_state <= 4)
-      {
-        fountain.pump[popcorn_state].setNow(255);
-        if (popcorn_previous < 4)
-          fountain.pump[popcorn_previous].setNow(0);
-      }
-      else if (popcorn_state <= 8)
-      {
-        fountain.pump[8-popcorn_state].setNow(255);
-        fountain.pump[8-popcorn_previous].setNow(0);
-      }
-      else if (popcorn_state == 9)
-      {
-        fountain.pump[0].setNow(0);
-        fountain.pump[5].setNow(255);
-      }
-      else if (popcorn_state == 10)
-      {
-        fountain.pump[2].setNow(255);
-        fountain.pump[5].setNow(0);
-      }
-      else
-      {
-        fountain.off();
-        if (random(0,3) == 0)
-          patternChange.expire();
-      }
-    }
-
-    else if (pattern == DECAY)
-    {  
-      internalPatternChange.setSeconds(3);
-      Dln("Pattern 4 DECAY");
-      
-      int pumpon;
-      do {
-        pumpon = random(0,fountain.size());
-      }
-      // Possible no pumps are set to off, so only wait for internal pattern change.
-      while (fountain.pump[pumpon].getNewValue() != 0 && !internalPatternChange.isNow());
-      
-      for (int p = 0; p < fountain.size(); ++p)
-      {
-        D("Pump "); D(p);
-        D2(" value = ", fountain.pump[p].getValue());
-        if (p == pumpon)
-          fountain.pump[p].setNow(255);
-        else
-          fountain.pump[p].setNewValue(0);      
-      }
-      D2("Pump on: ",pumpon);
-    }
-    else if (pattern == SYMETRICAL) // Symetrical
-    {
-      Dln("Pattern 5 SYMETRICAL");
-      int totalOn = 0;
-      for (int p = 5; p >= 0; --p)
-      {
-        switch (p)
+    switch (pattern) {
+      case FULL_OR_3QTR:
         {
-            // shift to front
-            case 5:
-              fountain.pump[p].setNewValue(fountain.pump[p-1].getRawValue());
-              //D4("F",p,"=",fountain.pump[p].getRawValue());
-              //D2("F(currentvalue)=",fountain.pump[p].getValue());
-              break;
-
-            case 4:
-            case 3:
-              fountain.pump[p].setNow(fountain.pump[p-1].getRawValue());
-              //D4("R",p,"=",fountain.pump[p].getRawValue());
-              break;
-
-            case 2:  // center;
-            
-              int value;
-              do {
-                value = random(0,5) * 64 - 1;
-                if (value < 128)
-                  value = 0;
-              }
-              while
-                (value == 0 && fountain.pump[1].getNewValue() == 0);
-              fountain.pump[p].setNewValue(value);
-              //D4("C",p,"=",fountain.pump[p].getRawValue());
-              break;
-  
-            // mirror
-            case 1:
-            case 0:
-              fountain.pump[p].setNow(fountain.pump[4 - p].getRawValue());
-              //D4("L",p,"=",fountain.pump[p].getRawValue());
-              break;
+          // all on at half, 3qtr or full;
+          Dln("Pattern 1 - FULL_OR_3QTR");
+          int p1value = random(7,9) * 32 - 1;
+          if (p1value >= 256) p1value = 255;
+          for (int p = 0; p < fountain.size() - 1; ++p)
+          {
+            fountain.pump[p].setNewValue(p1value);
+          }
         }
+        break;
 
-        if (fountain.pump[p].getNewValue() != 0)
-          ++totalOn;
-      }
+      case RANDOM_PAIR:
+        {
+          internalPatternChange.setSeconds(2); 
+          Dln("Pattern 2 RANDOM_PAIR");
+    
+          int max_random_pump = fountain.size() - 1;
+          // Pick an off pump
+          int pumpnum;
+          do {
+            pumpnum = random(0,max_random_pump);
+          }
+          while (fountain.pump[pumpnum].getNewValue() != 0 && !internalPatternChange.isNow());
+    
+          // Pick another off pump
+          int pumpnum2;
+          do {
+            pumpnum2 = random(0,max_random_pump);
+          }
+          while (pumpnum == pumpnum2 || (fountain.pump[pumpnum2].getNewValue() != 0  && !internalPatternChange.isNow()));
+            
+          int maxvalue = 255;
+          
+          fountain.off();
+          fountain.pump[pumpnum].setNow(maxvalue);
+          D2("Turn on Pump#",pumpnum);
+          fountain.pump[pumpnum2].setNow(maxvalue);
+          D2("Turn on Pump#",pumpnum2);
+        }
+        break;
 
-      // Make sure more than 1 pump is on;
-      if (totalOn <=2) {
-        Dln("SYMETRIC Forcing on extra pumps");
-        fountain.pump[0].setNewValue(128);
-        fountain.pump[4].setNewValue(128);
+      case POPCORN:
+        // rolling
+
+        internalPatternChange.setSeconds(1); 
+        Dln("Pattern 3 POPCORN");
+        popcorn_previous = popcorn_state;
+        if (++popcorn_state > 11)
+          popcorn_state = 0;
+
+        D4("popcorn_state=",popcorn_state," popcorn_previous=",popcorn_previous);
+        switch (popcorn_state) {
+          case 0:
+            fountain.off();
+            // flow through
+          case 1:
+          case 2:
+          case 3:
+          case 4:
+            fountain.pump[popcorn_state].setNow(255);
+            if (popcorn_previous < 4)
+              fountain.pump[popcorn_previous].setNow(0);
+            break;
+          case 5:
+          case 6:
+          case 7:
+          case 8:
+            fountain.pump[8-popcorn_state].setNow(255);
+            fountain.pump[8-popcorn_previous].setNow(0);
+            break;
+
+          case 9:
+            fountain.pump[0].setNow(0);
+            fountain.pump[5].setNow(255);
+            break;
+            
+          case 10:
+            fountain.pump[2].setNow(255);
+            fountain.pump[5].setNow(0);
+            break;
+
+          case 11:  // random repeat?
+            fountain.off();
+            if (random(0,3) == 0)
+              patternChange.expire();
+            break;
+        }
+        break;
+
+      case DECAY:
+        {
+          internalPatternChange.setSeconds(3);
+          Dln("Pattern 4 DECAY");
+          
+          int pumpon;
+          do {
+            pumpon = random(0,fountain.size());
+          }
+          // Possible no pumps are set to off, so only wait for internal pattern change.
+          while (fountain.pump[pumpon].getNewValue() != 0 && !internalPatternChange.isNow());
+          
+          for (int p = 0; p < fountain.size(); ++p)
+          {
+            D("Pump "); D(p);
+            D2(" value = ", fountain.pump[p].getValue());
+            if (p == pumpon)
+              fountain.pump[p].setNow(255);
+            else
+              fountain.pump[p].setNewValue(0);      
+          }
+          D2("Pump on: ",pumpon);
+        }
+        break;
+
+      case SYMETRICAL: // Symetrical
+        {
+          Dln("Pattern 5 SYMETRICAL");
+          int totalOn = 0;
+          for (int p = 5; p >= 0; --p)
+          {
+            switch (p)
+            {
+                // shift to front
+                case 5:
+                  fountain.pump[p].setNewValue(fountain.pump[p-1].getRawValue());
+                  //D4("F",p,"=",fountain.pump[p].getRawValue());
+                  //D2("F(currentvalue)=",fountain.pump[p].getValue());
+                  break;
+    
+                case 4:
+                case 3:
+                  fountain.pump[p].setNow(fountain.pump[p-1].getRawValue());
+                  //D4("R",p,"=",fountain.pump[p].getRawValue());
+                  break;
+    
+                case 2:  // center;
+                
+                  int value;
+                  do {
+                    value = random(0,5) * 64 - 1;
+                    if (value < 128)
+                      value = 0;
+                  }
+                  while
+                    (value == 0 && fountain.pump[1].getNewValue() == 0);
+                  fountain.pump[p].setNewValue(value);
+                  //D4("C",p,"=",fountain.pump[p].getRawValue());
+                  break;
+      
+                // mirror
+                case 1:
+                case 0:
+                  fountain.pump[p].setNow(fountain.pump[4 - p].getRawValue());
+                  //D4("L",p,"=",fountain.pump[p].getRawValue());
+                  break;
+            }
+  
+            if (fountain.pump[p].getNewValue() != 0)
+              ++totalOn;
+          }
+  
+          // Make sure more than 1 pump is on;
+          if (totalOn <=2) {
+            Dln("SYMETRIC Forcing on extra pumps");
+            fountain.pump[0].setNewValue(128);
+            fountain.pump[4].setNewValue(128);
+          }
       }
-    }
-    else
-    {
+      break;
+
+    default:  // programmimg error?
       patternChange.expire();
+      break;
     }
   } 
     
@@ -373,6 +417,7 @@ void loop()
   fountain.update();
   //Dln(fountain.displayValue());
 }
+
 
 boolean pause(unsigned mills)
 {
