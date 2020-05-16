@@ -11,7 +11,8 @@ public:
 };
 
 class Timer : public event {
-protected:
+//protected:
+public:
   unsigned long eventtime;
   unsigned long delaytime;
   boolean active;
@@ -29,6 +30,7 @@ public:
   void off();
   void on();
   boolean isPending();
+  boolean isActive();
   boolean isNow();
   unsigned long getMinutes();
 };  

@@ -1,12 +1,15 @@
 #include "Arduino.h"
+
+// Turn on /off debug here
 #define debug false
 #include "debug.h"
-#include "remote.h"
+
+#include "remote.h"   // Not used.
 #include "led.h"
 #include "pump.h"
 #include "timer.h"
 
-#define TESTING
+//#define TESTING
 
 
 #define USE_RANDOM_PATTERNS false
@@ -42,9 +45,9 @@ static const int lightSensorValue = 0;  // variable to store the value coming fr
 #if !defined(TESTING)
 static const int patternChangeSeconds = 20;
 static const int colorChangeSeconds = 10;
-static const int internalPatternChangeSeconds = 3;
+static const int internalPatternChangeSeconds = 4;
 static const int pumpfade = 4;
-static const int lightfade = 3;
+static const int lightfade = 2;
 static const long autoOffMinutes = 120;
 static const int pumpmin = 150;
 static const bool enablepumps = true;
@@ -74,6 +77,7 @@ enum pump_patterns {
   SIX_ONLY,
   MOUNTAIN,
   VALLEY,
+  SPLASH,
 
   /* Last Pattern.  Enum would be number of patterns */
   NUM_PATTERNS,
@@ -85,15 +89,20 @@ enum pump_patterns {
 };
 
 // If not using randomPatterns, then use program list
-int programList[] = { POPCORN, POPCORN, POPCORN,
+int programList[] = { 
+                      POPCORN, POPCORN, POPCORN, 
+                      SPLASH,
                       RANDOM_PAIR,
                       INSTANT_FULL_5, INSTANT_FULL_6, INSTANT_SIX_ONLY, 
                       MOUNTAIN, VALLEY, FULL_5,
-                      -1
+                      -1  // END PROGRAM restart.
                     };
+
+int maxProgramIndex = sizeof(programList) / sizeof(int) - 2;  // Less End of program marker
 int mode = 0;
 int colormode = 0;
 int pattern = NUM_PATTERNS; // force change
+int nextPattern = -1;
 int programIndex = 1000;    // force Change
 int pattern_one_state = 0;
 const int popcorn_reset = 11;
@@ -200,6 +209,7 @@ void loop()
       while (oldpattern == pattern)
         pattern = random(0,NUM_PATTERNS);
       D2("Random pattern = ",pattern);
+      nextPattern = -1;
     }
     else {
       if (++programIndex >= sizeof(programList)/sizeof(int) || programList[programIndex] == -1)
@@ -209,6 +219,8 @@ void loop()
       D2("Pattern = ", pattern);
       //if (pattern == RANDOM_PAIR)
       //  Serial.println("changed to random pairs");
+      nextPattern = programList[(programIndex + 1) % (maxProgramIndex + 1)];
+      D2("NextPattern = ", nextPattern);
     }
     
     // Reset Common state  
@@ -293,11 +305,9 @@ void loop()
       case POPCORN:
         // rolling
         Dln("Pattern POPCORN");
-
         internalPatternChange.setSeconds(1); 
-        Dln("Pattern 3 POPCORN");
         popcorn_previous = popcorn_state;
-        if (++popcorn_state > 11)
+        if (++popcorn_state > 9)  // Need to reach 'reset'
           popcorn_state = 0;
 
         D4("popcorn_state=",popcorn_state," popcorn_previous=",popcorn_previous);
@@ -317,9 +327,33 @@ void loop()
           case 6:
           case 7:
           case 8:
-            fountain.pump[8-popcorn_state].setNow(255);
-            fountain.pump[8-popcorn_previous].setNow(0);
+            // If repeating program, then skip 8
+            if (popcorn_state != 8 || USE_RANDOM_PATTERNS || nextPattern != pattern){
+              fountain.pump[8-popcorn_state].setNow(255);
+              fountain.pump[8-popcorn_previous].setNow(0);
+              break;
+            }
+            // else fall through 
+          default:  // random repeat?
+            fountain.off();
+            if (!USE_RANDOM_PATTERNS||random(0,3) == 0)
+              patternChange.expire();
             break;
+        }
+        break;
+        
+      case SPLASH:
+        // rolling
+        Dln("Pattern SPLASH");
+
+        internalPatternChange.setSeconds(1); 
+        Dln("Pattern 3 POPCORN");
+        popcorn_previous = popcorn_state;
+        if (++popcorn_state > 11)
+          popcorn_state = 9;
+
+        D4("popcorn_state=",popcorn_state," popcorn_previous=",popcorn_previous);
+        switch (popcorn_state) {
 
           case 9:
             fountain.pump[0].setNow(0);
@@ -330,8 +364,8 @@ void loop()
             fountain.pump[2].setNow(255);
             fountain.pump[5].setNow(0);
             break;
-
-          case 11:  // random repeat?
+          
+          default:  // random repeat?
             fountain.off();
             if (random(0,3) == 0 || !USE_RANDOM_PATTERNS)
               patternChange.expire();
@@ -420,11 +454,13 @@ void loop()
       break;
 
     case INSTANT_FULL_5:
-      fountain.setFadeSpeed(0);  // in Seconds.
+     Dln("Pattern INSTANT_FULL_5");
+      //fountain.setFadeSpeed(0);  // in Seconds.
       for (int p = 0; p <= 4; ++p)
         fountain.pump[p].setNow(255);
       fountain.pump[5].setNow(0);
       patternChange.setSeconds(internalPatternChangeSeconds);
+      internalPatternChange.off();
       break;
       
     case FULL_5:
@@ -433,26 +469,36 @@ void loop()
         fountain.pump[p].setNewValue(255);
       fountain.pump[5].setNewValue(0);
       patternChange.setSeconds(internalPatternChangeSeconds);
+      internalPatternChange.off();
       break;
 
     case INSTANT_FULL_6:
-      fountain.setFadeSpeed(0);  // in Seconds.
+      Dln("Pattern INSTANT_FULL_6");
+      //fountain.setFadeSpeed(0);  // in Seconds.
       for (int p = 0; p <= 5; ++p)
         fountain.pump[p].setNow(255);
       patternChange.setSeconds(internalPatternChangeSeconds);
+      internalPatternChange.off();
       break;
       
     case FULL_6:
       Dln("Pattern FULL_6");
       fountain.setNewValue(255);
       patternChange.setSeconds(internalPatternChangeSeconds);
+      internalPatternChange.off();
       break;
 
     case INSTANT_SIX_ONLY:
-      fountain.setFadeSpeed(0);  // in Seconds.
+      Dln("Pattern INSTANT_SIX_ONLY");    
+      D2("patternChange.isActive() = ", patternChange.isActive());
+      D2("patternChange.isPending() = ", patternChange.isPending());
+      D2("eventtime = ", patternChange.eventtime);
+      D2("millis() = ", millis());
+      //fountain.setFadeSpeed(0);  // in Seconds.  screws up the setNow code????
       fountain.off();
       fountain.pump[5].setNow(255);
       patternChange.setSeconds(internalPatternChangeSeconds);
+      internalPatternChange.off();
       break;
       
     case SIX_ONLY:
@@ -460,6 +506,7 @@ void loop()
       fountain.setNewValue(0);
       fountain.pump[5].setNewValue(255);
       patternChange.setSeconds(internalPatternChangeSeconds);
+      internalPatternChange.off();
       break;
       
     case MOUNTAIN:
@@ -471,6 +518,7 @@ void loop()
       fountain.pump[4].setNewValue(128);
       fountain.pump[5].setNewValue(0);
       patternChange.setSeconds(internalPatternChangeSeconds);
+      internalPatternChange.off();
       break;
       
     case VALLEY:
@@ -482,6 +530,7 @@ void loop()
       fountain.pump[4].setNewValue(255);
       fountain.pump[5].setNewValue(0);
       patternChange.setSeconds(internalPatternChangeSeconds);
+      internalPatternChange.off();
       break;
             
     default:  // programmimg error?
@@ -515,7 +564,6 @@ void loop()
     rgb.off();
     
   fountain.update();
-  //Dln(fountain.displayValue());
 }
 
 

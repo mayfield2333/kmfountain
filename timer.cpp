@@ -58,6 +58,11 @@ boolean Timer::isPending()
   return eventHappened;
 }
 
+boolean Timer::isActive()
+{
+  return active;
+}
+
 /**
 * return true of the timer has expired,
 * and reset the timer;

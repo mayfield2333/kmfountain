@@ -1,6 +1,6 @@
 
 #include "pump.h"
-#define debug false
+#define debug true
 #include "debug.h"
 
 void Pump::init(int pin) {

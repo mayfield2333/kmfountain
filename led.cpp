@@ -117,9 +117,9 @@ void RGBLed::colorWheel() {
   if (secondary != primary && secondary > 2)
     { Serial.print("**** ERROR ****: secondary == "); Serial.println(secondary);}
 
-  setRed((primary == 0 || secondary == 0) ? 255 : 0);
-  setGreen((primary == 1 || secondary == 1) ? 255 : 0);
-  setBlue((primary == 2 || secondary == 2) ? 255 : 0);
+  setRed((primary == 0 || secondary == 0) ? 255 : 32);
+  setGreen((primary == 1 || secondary == 1) ? 255 : 32);
+  setBlue((primary == 2 || secondary == 2) ? 255 : 32);
 }
 
 void RGBLed::randomColor()
