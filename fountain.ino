@@ -69,10 +69,10 @@ boolean forceLightsOn = true;
 enum pump_patterns {
   POPCORN, 
   RANDOM_PAIR,
-  INSTANT_FULL_5,
-  FULL_5,
-  INSTANT_FULL_6,
-  FULL_6,
+  INSTANT_THREE,
+  THREE,
+  INSTANT_FOUR,
+  FOUR,
   INSTANT_SIX_ONLY,
   SIX_ONLY,
   MOUNTAIN,
@@ -93,8 +93,8 @@ int programList[] = {
                       POPCORN, POPCORN, POPCORN, 
                       SPLASH,
                       RANDOM_PAIR,
-                      INSTANT_FULL_5, INSTANT_FULL_6, INSTANT_SIX_ONLY, 
-                      MOUNTAIN, VALLEY, FULL_5,
+                      INSTANT_THREE, INSTANT_FOUR, INSTANT_SIX_ONLY, 
+                      MOUNTAIN, VALLEY, THREE,
                       -1  // END PROGRAM restart.
                     };
 
@@ -453,39 +453,51 @@ void loop()
       }
       break;
 
-    case INSTANT_FULL_5:
-     Dln("Pattern INSTANT_FULL_5");
+    case INSTANT_THREE:
+     Dln("Pattern INSTANT_THREE");
       //fountain.setFadeSpeed(0);  // in Seconds.
-      for (int p = 0; p <= 4; ++p)
+      for (int p = 1; p <= 3; ++p)
         fountain.pump[p].setNow(255);
+      fountain.pump[0].setNow(0);
+      fountain.pump[4].setNow(0);
       fountain.pump[5].setNow(0);
       patternChange.setSeconds(internalPatternChangeSeconds);
       internalPatternChange.off();
       break;
       
-    case FULL_5:
-      Dln("Pattern FULL_5");
-      for (int p = 0; p <= 4; ++p)
-        fountain.pump[p].setNewValue(255);
+    case THREE:
+      Dln("Pattern THREE");
+      for (int p = 1; p <= 3; ++p)
+        fountain.pump[p].setNewValue(128);
+      fountain.pump[0].setNewValue(0);
+      fountain.pump[4].setNewValue(0);
       fountain.pump[5].setNewValue(0);
       patternChange.setSeconds(internalPatternChangeSeconds);
       internalPatternChange.off();
       break;
 
-    case INSTANT_FULL_6:
-      Dln("Pattern INSTANT_FULL_6");
+    case INSTANT_FOUR:
+      Dln("Pattern INSTANT_FOUR");
       //fountain.setFadeSpeed(0);  // in Seconds.
-      for (int p = 0; p <= 5; ++p)
-        fountain.pump[p].setNow(255);
+      fountain.pump[0].setNow(0);
+      fountain.pump[4].setNow(0);
+      for (int p = 1; p <= 3; ++p)
+        fountain.pump[p].setNow(128);
+      fountain.pump[5].setNow(96);
+      
       patternChange.setSeconds(internalPatternChangeSeconds);
       internalPatternChange.off();
       break;
       
-    case FULL_6:
-      Dln("Pattern FULL_6");
-      fountain.setNewValue(255);
+    case FOUR:
+      Dln("Pattern FOUR");
+      fountain.pump[0].setNewValue(0);
+      fountain.pump[4].setNewValue(0);
+      for (int p = 1; p <= 3; ++p)
+        fountain.pump[p].setNewValue(128);
+      fountain.pump[5].setNewValue(96);
+      
       patternChange.setSeconds(internalPatternChangeSeconds);
-      internalPatternChange.off();
       break;
 
     case INSTANT_SIX_ONLY:
@@ -496,7 +508,7 @@ void loop()
       D2("millis() = ", millis());
       //fountain.setFadeSpeed(0);  // in Seconds.  screws up the setNow code????
       fountain.off();
-      fountain.pump[5].setNow(255);
+      fountain.pump[5].setNow(172);
       patternChange.setSeconds(internalPatternChangeSeconds);
       internalPatternChange.off();
       break;
@@ -504,18 +516,18 @@ void loop()
     case SIX_ONLY:
       Dln("Pattern SIX_ONLY");
       fountain.setNewValue(0);
-      fountain.pump[5].setNewValue(255);
+      fountain.pump[5].setNewValue(172);
       patternChange.setSeconds(internalPatternChangeSeconds);
       internalPatternChange.off();
       break;
       
     case MOUNTAIN:
       Dln("Pattern MOUNTAIN");
-      fountain.pump[0].setNewValue(128);
-      fountain.pump[1].setNewValue(172);
+      fountain.pump[0].setNewValue(0);
+      fountain.pump[1].setNewValue(128);
       fountain.pump[2].setNewValue(255);
-      fountain.pump[3].setNewValue(172);
-      fountain.pump[4].setNewValue(128);
+      fountain.pump[3].setNewValue(128);
+      fountain.pump[4].setNewValue(0);
       fountain.pump[5].setNewValue(0);
       patternChange.setSeconds(internalPatternChangeSeconds);
       internalPatternChange.off();
@@ -523,11 +535,11 @@ void loop()
       
     case VALLEY:
       Dln("Pattern VALLEY");
-      fountain.pump[0].setNewValue(255);
-      fountain.pump[1].setNewValue(172);
+      fountain.pump[0].setNewValue(0);
+      fountain.pump[1].setNewValue(255);
       fountain.pump[2].setNewValue(128);
-      fountain.pump[3].setNewValue(172);
-      fountain.pump[4].setNewValue(255);
+      fountain.pump[3].setNewValue(255);
+      fountain.pump[4].setNewValue(0);
       fountain.pump[5].setNewValue(0);
       patternChange.setSeconds(internalPatternChangeSeconds);
       internalPatternChange.off();
