@@ -94,7 +94,7 @@ int programList[] = {
                       SPLASH,
                       RANDOM_PAIR,
                       INSTANT_THREE, INSTANT_FOUR, INSTANT_SIX_ONLY, 
-                      MOUNTAIN, VALLEY, THREE,
+                      MOUNTAIN, VALLEY, THREE, THREE,
                       -1  // END PROGRAM restart.
                     };
 
@@ -651,5 +651,3 @@ void changecolor() {
         break;
     }
 }
-
-
