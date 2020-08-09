@@ -117,8 +117,12 @@ void RGBLed::colorWheel() {
   if (secondary != primary && secondary > 2)
     { Serial.print("**** ERROR ****: secondary == "); Serial.println(secondary);}
 
-  setRed((primary == 0 || secondary == 0) ? 255 : 0);
-  setGreen((primary == 1 || secondary == 1) ? 255 : 0);
+  setRed((primary == 0 || secondary == 0) ? 255 :
+      // since solid blue is so dark, lets brighten it some... 
+      (primary == 2 && secondary == 0 ? 64 : 0));
+  setGreen((primary == 1 || secondary == 1) ? 255 : 
+      // since solid blue is so dark, lets brighten it some... 
+      (primary == 2 && secondary == 0 ? 64 : 0));
   setBlue((primary == 2 || secondary == 2) ? 255 : 0);
 }
 
@@ -241,4 +245,3 @@ void RGBLed::off() {
   allOff();
   Dln("allOff");
 }
-
